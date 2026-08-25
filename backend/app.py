@@ -107,6 +107,7 @@ def submit_exam():
     data = request.get_json()
     student_name = data.get('studentName', 'Anonymous').strip()
     answers = data.get('answers', {})
+    start_time = data.get('startTime', 'N/A')
 
     if check_candidate_exists(student_name):
         return jsonify({"error": "Candidate has already completed the examination."}), 400
@@ -116,6 +117,7 @@ def submit_exam():
 
     record = {
         "timestamp": timestamp,
+        "startTime": start_time,
         "studentName": student_name,
         "score": score,
         "total": total,

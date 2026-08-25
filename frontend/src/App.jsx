@@ -12,6 +12,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   useEffect(() => {
     fetchQuestions();
@@ -55,6 +57,7 @@ export default function App() {
         alert('This candidate has already completed the assessment. Re-examination is strictly prohibited.');
         return;
       }
+      setStartTime(new Date().toLocaleString());
       setIsExamStarted(true);
     } catch (err) {
       alert('Error verifying candidate credentials. Please try again.');
@@ -74,7 +77,8 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentName: candidateName,
-          answers: answers
+          answers: answers,
+          startTime: startTime
         })
       });
       const data = await res.json();
@@ -90,6 +94,18 @@ export default function App() {
     }
   };
 
+  const handleNextQuestion = () => {
+    const isLastQuestion = currentQuestionIndex === questions.length - 1;
+    if (isLastQuestion) {
+      handleSubmitExam();
+    } else {
+      setCurrentQuestionIndex(prev => prev + 1);
+    }
+  };
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+
   return (
     <div className="portal-container">
       <header className="portal-header">
@@ -98,10 +114,14 @@ export default function App() {
       </header>
 
       {!isExamStarted ? (
-        <div className="card">
+        <div className="card compact-card">
+          <div className="card-header">
+            <h2>Candidate Verification</h2>
+            <p className="greeting">Good luck on your examination!</p>
+          </div>
           <form onSubmit={handleStartExam}>
             <div className="form-group">
-              <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+              <label className="form-label">
                 Candidate Full Name
               </label>
               <input
@@ -117,7 +137,7 @@ export default function App() {
               Start Examination
             </button>
           </form>
-          {error && <p style={{ color: '#dc2626', marginTop: '10px' }}>{error}</p>}
+          {error && <p className="error-message">{error}</p>}
         </div>
       ) : result && !isReviewMode ? (
         /* RESULT PAGE */
@@ -125,30 +145,32 @@ export default function App() {
           <h2>Assessment Summary</h2>
           <div className={`result-banner ${result.status === 'PASSED' ? 'pass' : 'fail'}`}>
             <h3>Status: {result.status}</h3>
-            <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '10px 0 0 0' }}>
+            <p className="result-score">
               Score: {result.score} / {result.total} ({result.percentage}%)
             </p>
           </div>
-          <p><strong>Candidate Name:</strong> {result.studentName}</p>
-          <p><strong>Completion Date & Time:</strong> {result.timestamp}</p>
-          
-          <div className="action-bar" style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button onClick={() => setIsReviewMode(true)} className="btn btn-primary">
+          <div className="result-details">
+            <p><strong>Candidate Name:</strong> {result.studentName}</p>
+            <p><strong>Start Date & Time:</strong> {result.startTime}</p>
+            <p><strong>Completion Date & Time:</strong> {result.timestamp}</p>
+          </div>
+
+          <div className="action-bar-flex">
+            <button onClick={() => setIsReviewMode(true)} className="btn btn-primary" style={{ width: 'auto' }}>
               Review Submitted Answers
             </button>
           </div>
-          
-          <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#f8fafc', borderRadius: '6px', textAlign: 'center', color: '#64748b', fontSize: '13px', border: '1px solid #e2e8f0' }}>
+
+          <div className="assessment-locked">
             🔒 <strong>Assessment Locked:</strong> Multiple attempts are prohibited for this examination.
           </div>
         </div>
       ) : (
         /* EXAM QUESTION & REVIEW PAGE */
         <div>
-          {/* Instructions Banner */}
           {isReviewMode ? (
-            <div className="instruction-box" style={{ backgroundColor: '#f0fdf4', borderColor: '#16a34a', color: '#166534' }}>
-              <strong>Review Mode Active:</strong> Displayed below are your selected responses alongside the official <span style={{ color: '#15803d', fontWeight: 'bold' }}>Correct Answer Keys</span> for evaluation.
+            <div className="instruction-box review">
+              <strong>Review Mode Active:</strong> Displayed below are your selected responses alongside the official <span className="review-accent">Correct Answer Keys</span> for evaluation.
             </div>
           ) : (
             <div className="instruction-box">
@@ -164,56 +186,117 @@ export default function App() {
                   Final Score: {result.score} / {result.total}
                 </strong>
               ) : (
-                <span><strong>Progress:</strong> {Object.keys(answers).length} of {questions.length} Answered</span>
+                <span><strong>Question {currentQuestionIndex + 1} of {questions.length}</strong></span>
               )}
             </div>
           </div>
 
-          {questions.map((q) => {
-            const userAnswer = answers[q.questionNo];
-            const correctAnswer = result?.answerKey?.[String(q.questionNo)];
+          {isReviewMode ? (
+            /* REVIEW MODE: Show all questions */
+            questions.map((q) => {
+              const userAnswer = answers[q.questionNo];
+              const correctAnswer = result?.answerKey?.[String(q.questionNo)];
 
-            return (
-              <div key={q.questionNo} className="card">
-                {/* NUMBER NALANG NA NAKA-LEFT ALIGN */}
-                <h3 style={{ marginTop: 0, marginBottom: '16px', color: '#1e293b', textAlign: 'left' }}>
-                  {q.questionNo}.
+              return (
+                <div key={q.questionNo} className="card">
+                  <h3 className="question-number">
+                    {q.questionNo}.
+                  </h3>
+
+                  {q.questionText && q.questionText.trim() !== '' && (
+                    <p className="question-text">
+                      {q.questionText}
+                    </p>
+                  )}
+
+                  {q.imageFileName && (
+                    <div className="asset-view">
+                      <img
+                        src={`${API_BASE_URL}/static/images/${q.imageFileName}`}
+                        alt={`Item #${q.questionNo}`}
+                        className="question-asset"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://via.placeholder.com/300x150?text=Image+Not+Found';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="options-grid">
+                    {Object.entries(q.options).map(([key, val]) => {
+                      let cellClass = 'option-cell';
+                      const isUserPick = key === userAnswer;
+                      const isCorrectPick = key === correctAnswer;
+
+                      if (isCorrectPick) {
+                        cellClass += ' correct-answer';
+                      } else if (isUserPick && !isCorrectPick) {
+                        cellClass += ' wrong-answer';
+                      }
+
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={cellClass}
+                          disabled
+                        >
+                          <span className="badge">{key}</span> {val}
+
+                          <div className="review-badge-group">
+                            {isUserPick && (
+                              <span className={`review-badge user-answer${isCorrectPick ? ' is-correct' : ''}`}>
+                                YOUR ANSWER
+                              </span>
+                            )}
+                            {isCorrectPick && (
+                              <span className="review-badge correct-key">
+                                ✓ CORRECT KEY
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            /* EXAM MODE: Show one question at a time */
+            currentQuestion && (
+              <div className="card">
+                <h3 className="question-number">
+                  {currentQuestion.questionNo}.
                 </h3>
-                
-                {q.questionText && q.questionText.trim() !== '' && (
-                  <p style={{ fontSize: '16px', fontWeight: '500', marginBottom: '16px', textAlign: 'left' }}>
-                    {q.questionText}
+
+                {currentQuestion.questionText && currentQuestion.questionText.trim() !== '' && (
+                  <p className="question-text">
+                    {currentQuestion.questionText}
                   </p>
                 )}
 
-                {q.imageFileName && (
+                {currentQuestion.imageFileName && (
                   <div className="asset-view">
                     <img
-                      src={`${API_BASE_URL}/static/images/${q.imageFileName}`}
-                      alt={`Item #${q.questionNo}`}
+                      src={`${API_BASE_URL}/static/images/${currentQuestion.imageFileName}`}
+                      alt={`Item #${currentQuestion.questionNo}`}
                       className="question-asset"
                       onError={(e) => {
-                        e.target.onerror = null; 
+                        e.target.onerror = null;
                         e.target.src = 'https://via.placeholder.com/300x150?text=Image+Not+Found';
                       }}
                     />
                   </div>
                 )}
 
-                {/* Multiple Choice Options */}
                 <div className="options-grid">
-                  {Object.entries(q.options).map(([key, val]) => {
+                  {Object.entries(currentQuestion.options).map(([key, val]) => {
                     let cellClass = 'option-cell';
-                    const isUserPick = key === userAnswer;
-                    const isCorrectPick = key === correctAnswer;
+                    const isUserPick = key === answers[currentQuestion.questionNo];
 
-                    if (isReviewMode) {
-                      if (isCorrectPick) {
-                        cellClass += ' correct-answer';
-                      } else if (isUserPick && !isCorrectPick) {
-                        cellClass += ' wrong-answer';
-                      }
-                    } else if (isUserPick) {
+                    if (isUserPick) {
                       cellClass += ' active';
                     }
 
@@ -222,49 +305,16 @@ export default function App() {
                         key={key}
                         type="button"
                         className={cellClass}
-                        onClick={() => handleOptionSelect(q.questionNo, key)}
-                        disabled={isReviewMode}
+                        onClick={() => handleOptionSelect(currentQuestion.questionNo, key)}
                       >
                         <span className="badge">{key}</span> {val}
-                        
-                        {/* Review Mode Badges */}
-                        {isReviewMode && (
-                          <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            {isUserPick && (
-                              <span style={{ 
-                                backgroundColor: isCorrectPick ? '#16a34a' : '#dc2626', 
-                                color: '#ffffff', 
-                                padding: '3px 8px', 
-                                borderRadius: '4px', 
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                letterSpacing: '0.5px'
-                              }}>
-                                YOUR ANSWER
-                              </span>
-                            )}
-                            {isCorrectPick && (
-                              <span style={{ 
-                                backgroundColor: '#15803d', 
-                                color: '#ffffff', 
-                                padding: '3px 8px', 
-                                borderRadius: '4px', 
-                                fontSize: '11px',
-                                fontWeight: '700',
-                                letterSpacing: '0.5px'
-                              }}>
-                                ✓ CORRECT KEY
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </button>
                     );
                   })}
                 </div>
               </div>
-            );
-          })}
+            )
+          )}
 
           <div className="action-bar">
             {isReviewMode ? (
@@ -273,11 +323,11 @@ export default function App() {
               </button>
             ) : (
               <button
-                onClick={handleSubmitExam}
-                className="btn btn-success"
-                disabled={loading}
+                onClick={handleNextQuestion}
+                className={`btn ${isLastQuestion ? 'btn-success' : 'btn-primary'}`}
+                disabled={loading || !answers[currentQuestion?.questionNo]}
               >
-                {loading ? 'Submitting...' : 'Submit Examination'}
+                {loading ? 'Submitting...' : isLastQuestion ? 'Submit Examination' : 'Next Question'}
               </button>
             )}
           </div>
