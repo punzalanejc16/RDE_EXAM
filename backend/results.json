@@ -1,224 +1,27 @@
 [
     {
-        "timestamp": "08/29/2026, 10:43:17 PM",
-        "startTime": "08/29/2026, 10:42:57 PM",
-        "studentName": "sd",
-        "score": 1,
-        "total": 10,
-        "percentage": 10.0,
-        "status": "FAILED",
-        "detailedBreakdown": [
-            {
-                "questionNo": 1,
-                "questionText": "",
-                "imageFileName": "blade.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Blade-Single-Top-Fullview",
-                "correctAnswer": "B",
-                "correctAnswerText": "Blade-Single-Top-Fullview",
-                "isCorrect": true
-            },
-            {
-                "questionNo": 2,
-                "questionText": "",
-                "imageFileName": "blade3.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Device-Single-Top-Fullview",
-                "correctAnswer": "D",
-                "correctAnswerText": "Blade-Single-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 3,
-                "questionText": "",
-                "imageFileName": "caliper.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Label-Single-Top-Fullview",
-                "correctAnswer": "A",
-                "correctAnswerText": "Caliper-Single-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 4,
-                "questionText": "",
-                "imageFileName": "carrier.jpg",
-                "candidateAnswer": "D",
-                "candidateAnswerText": "Device-Multiple-Angle-Fullview",
-                "correctAnswer": "C",
-                "correctAnswerText": "Carrier-Single-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 5,
-                "questionText": "",
-                "imageFileName": "cotton.jpg",
-                "candidateAnswer": "A",
-                "candidateAnswerText": "Cotton-Single-Top-Zoomview",
-                "correctAnswer": "B",
-                "correctAnswerText": "Cotton-Single-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 6,
-                "questionText": "",
-                "imageFileName": "device7.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Label-Single-Top-Fullview",
-                "correctAnswer": "C",
-                "correctAnswerText": "Device-Multiple-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 7,
-                "questionText": "",
-                "imageFileName": "label.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Label-Single-Top-Fullview",
-                "correctAnswer": "A",
-                "correctAnswerText": "Label-Multiple-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 8,
-                "questionText": "",
-                "imageFileName": "others.jpg",
-                "candidateAnswer": "A",
-                "candidateAnswerText": "Device-Single-Top-Zoomview",
-                "correctAnswer": "D",
-                "correctAnswerText": "Others",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 9,
-                "questionText": "",
-                "imageFileName": "reel.jpg",
-                "candidateAnswer": "A",
-                "candidateAnswerText": "Carrier-Single-Angled-Fullview",
-                "correctAnswer": "C",
-                "correctAnswerText": "Reel-Single-Angled-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 10,
-                "questionText": "",
-                "imageFileName": "reel2.jpg",
-                "candidateAnswer": "C",
-                "candidateAnswerText": "Caliper-Single-Top-Zoomview",
-                "correctAnswer": "B",
-                "correctAnswerText": "Reel-Single-Top-Fullview",
-                "isCorrect": false
-            }
-        ]
+        "timestamp": "2026-08-25 21:21:46",
+        "studentName": "mara",
+        "score": 0,
+        "total": 3,
+        "percentage": 0.0,
+        "status": "FAILED"
     },
     {
-        "timestamp": "08/31/2026, 08:49:52 PM",
-        "startTime": "08/31/2026, 08:49:38 PM",
-        "studentName": "Euge",
-        "score": 3,
-        "total": 10,
+        "timestamp": "2026-08-25 21:46:07",
+        "studentName": "Jethro",
+        "score": 0,
+        "total": 20,
+        "percentage": 0.0,
+        "status": "FAILED"
+    },
+    {
+        "timestamp": "2026-08-25 22:16:15",
+        "startTime": "8/25/2026, 10:15:35 PM",
+        "studentName": "Euge Jan Punzalan",
+        "score": 6,
+        "total": 20,
         "percentage": 30.0,
-        "status": "FAILED",
-        "detailedBreakdown": [
-            {
-                "questionNo": 1,
-                "questionText": "",
-                "imageFileName": "blade.jpg",
-                "candidateAnswer": "D",
-                "candidateAnswerText": "Label-Single-Top-Fullview",
-                "correctAnswer": "B",
-                "correctAnswerText": "Blade-Single-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 2,
-                "questionText": "",
-                "imageFileName": "blade3.jpg",
-                "candidateAnswer": "D",
-                "candidateAnswerText": "Blade-Single-Top-Fullview",
-                "correctAnswer": "D",
-                "correctAnswerText": "Blade-Single-Top-Fullview",
-                "isCorrect": true
-            },
-            {
-                "questionNo": 3,
-                "questionText": "",
-                "imageFileName": "caliper.jpg",
-                "candidateAnswer": "D",
-                "candidateAnswerText": "Device-Multiple-Angle-Fullview",
-                "correctAnswer": "A",
-                "correctAnswerText": "Caliper-Single-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 4,
-                "questionText": "",
-                "imageFileName": "carrier.jpg",
-                "candidateAnswer": "D",
-                "candidateAnswerText": "Device-Multiple-Angle-Fullview",
-                "correctAnswer": "C",
-                "correctAnswerText": "Carrier-Single-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 5,
-                "questionText": "",
-                "imageFileName": "cotton.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Cotton-Single-Top-Fullview",
-                "correctAnswer": "B",
-                "correctAnswerText": "Cotton-Single-Top-Fullview",
-                "isCorrect": true
-            },
-            {
-                "questionNo": 6,
-                "questionText": "",
-                "imageFileName": "device7.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Label-Single-Top-Fullview",
-                "correctAnswer": "C",
-                "correctAnswerText": "Device-Multiple-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 7,
-                "questionText": "",
-                "imageFileName": "label.jpg",
-                "candidateAnswer": "D",
-                "candidateAnswerText": "Device-Multiple-Angle-Fullview",
-                "correctAnswer": "A",
-                "correctAnswerText": "Label-Multiple-Top-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 8,
-                "questionText": "",
-                "imageFileName": "others.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Caliper-Single-Top-Fullview",
-                "correctAnswer": "D",
-                "correctAnswerText": "Others",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 9,
-                "questionText": "",
-                "imageFileName": "reel.jpg",
-                "candidateAnswer": "D",
-                "candidateAnswerText": "Device-Multiple-Angle-Fullview",
-                "correctAnswer": "C",
-                "correctAnswerText": "Reel-Single-Angled-Fullview",
-                "isCorrect": false
-            },
-            {
-                "questionNo": 10,
-                "questionText": "",
-                "imageFileName": "reel2.jpg",
-                "candidateAnswer": "B",
-                "candidateAnswerText": "Reel-Single-Top-Fullview",
-                "correctAnswer": "B",
-                "correctAnswerText": "Reel-Single-Top-Fullview",
-                "isCorrect": true
-            }
-        ]
+        "status": "FAILED"
     }
 ]

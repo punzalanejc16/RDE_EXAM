@@ -1,30 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
-import { shuffleArray, THEME_STORAGE_KEY, getInitialTheme } from './utils/helpers';
-import { 
-  API_BASE_URL, 
-  fetchQuestionsApi, 
-  checkCandidateNameApi, 
-  submitExamApi, 
-  adminLoginApi, 
-  fetchAdminResultsApi 
-} from './api/api';
-
-import ThemeToggle from './components/themetoggle';
-import LightboxModal from './components/lightboxmodal';
-import AdminLogin from './components/admin/adminlogin';
-import AdminTable from './components/admin/admintable';
-import ReviewModal from './components/admin/reviewmodal';
-import CandidateForm from './components/exam/CandidateForm';
-import ExamCard from './components/exam/ExamCard';
-import ResultSummary from './components/exam/ResultSummary';
-
-const initialTheme = getInitialTheme();
-if (initialTheme === 'dark') {
-  document.body.classList.add('dark-mode');
-}
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 export default function App() {
   const [candidateName, setCandidateName] = useState('');
@@ -34,142 +11,27 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isReviewMode, setIsReviewMode] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [lightboxImage, setLightboxImage] = useState(null);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(initialTheme === 'dark');
-
-  const [isAdminView, setIsAdminView] = useState(() => {
-    return new URLSearchParams(window.location.search).get('view') === 'admin';
-  });
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminPassInput, setAdminPassInput] = useState('');
-  const [adminPassError, setAdminPassError] = useState('');
-  const [adminResults, setAdminResults] = useState([]);
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [adminFetchError, setAdminFetchError] = useState('');
-  const [reviewCandidate, setReviewCandidate] = useState(null);
-
-  const confettiFiredRef = useRef(false);
 
   useEffect(() => {
-    const handleUrlChange = () => {
-      const params = new URLSearchParams(window.location.search);
-      setIsAdminView(params.get('view') === 'admin');
-    };
-    window.addEventListener('popstate', handleUrlChange);
-    return () => window.removeEventListener('popstate', handleUrlChange);
+    fetchQuestions();
   }, []);
-
-  useEffect(() => {
-    document.body.classList.toggle('dark-mode', isDarkMode);
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, isDarkMode ? 'dark' : 'light');
-    } catch {
-      /* localStorage unavailable */
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(prev => !prev);
-
-  useEffect(() => {
-    if (!result || result.status !== 'PASSED' || confettiFiredRef.current) return;
-    confettiFiredRef.current = true;
-
-    const colors = ['#2563eb', '#16a34a', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
-    const duration = 3000;
-    const end = Date.now() + duration;
-
-    confetti({
-      particleCount: 140,
-      spread: 90,
-      startVelocity: 42,
-      origin: { y: 0.6 },
-      colors
-    });
-
-    const frame = () => {
-      confetti({
-        particleCount: 6,
-        angle: 60,
-        spread: 60,
-        origin: { x: 0, y: 0.7 },
-        colors
-      });
-      confetti({
-        particleCount: 6,
-        angle: 120,
-        spread: 60,
-        origin: { x: 1, y: 0.7 },
-        colors
-      });
-      if (Date.now() < end) requestAnimationFrame(frame);
-    };
-    frame();
-  }, [result]);
-
-  useEffect(() => {
-    if (isAdminView && isAdminAuthenticated) {
-      fetchAdminResults();
-    }
-  }, [isAdminView, isAdminAuthenticated]);
-
-  useEffect(() => {
-    if (!isAdminView) {
-      fetchQuestions();
-    }
-  }, [isAdminView]);
-
-  useEffect(() => {
-    if (questions.length > 0 && currentQuestionIndex < questions.length - 1) {
-      const nextQuestion = questions[currentQuestionIndex + 1];
-      if (nextQuestion && nextQuestion.imageFileName) {
-        const img = new Image();
-        img.src = `${API_BASE_URL}/static/images/${nextQuestion.imageFileName}`;
-      }
-    }
-  }, [currentQuestionIndex, questions]);
-
-  const fetchAdminResults = async () => {
-    setAdminLoading(true);
-    setAdminFetchError('');
-    try {
-      const data = await fetchAdminResultsApi();
-      setAdminResults(data);
-    } catch (err) {
-      setAdminFetchError(err.message);
-    } finally {
-      setAdminLoading(false);
-    }
-  };
-
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    setAdminPassError('');
-    try {
-      const data = await adminLoginApi(adminPassInput);
-      if (data.success) {
-        setIsAdminAuthenticated(true);
-        setAdminPassError('');
-      } else {
-        setAdminPassError(data.error || 'Invalid passphrase. Access denied.');
-      }
-    } catch {
-      setAdminPassError('Cannot connect to authentication server.');
-    }
-  };
 
   const fetchQuestions = async () => {
     try {
-      const data = await fetchQuestionsApi();
-      setQuestions(shuffleArray(data));
+      const res = await fetch(`${API_BASE_URL}/api/questions`);
+      if (!res.ok) throw new Error('Failed to load assessment items from the backend server.');
+      const data = await res.json();
+      setQuestions(data);
     } catch (err) {
       setError(err.message);
     }
   };
 
   const handleOptionSelect = (qNo, optionKey) => {
+    if (isReviewMode) return;
     setAnswers(prev => ({
       ...prev,
       [qNo]: optionKey
@@ -185,14 +47,19 @@ export default function App() {
     }
 
     try {
-      const data = await checkCandidateNameApi(trimmedName);
+      const res = await fetch(`${API_BASE_URL}/api/check-name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentName: trimmedName })
+      });
+      const data = await res.json();
       if (data.exists) {
         alert('This candidate has already completed the assessment. Re-examination is strictly prohibited.');
         return;
       }
-      setStartTime(new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+      setStartTime(new Date().toLocaleString());
       setIsExamStarted(true);
-    } catch {
+    } catch (err) {
       alert('Error verifying candidate credentials. Please try again.');
     }
   };
@@ -205,17 +72,22 @@ export default function App() {
 
     setLoading(true);
     try {
-      const data = await submitExamApi({
-        studentName: candidateName,
-        answers: answers,
-        startTime: startTime
+      const res = await fetch(`${API_BASE_URL}/api/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName: candidateName,
+          answers: answers,
+          startTime: startTime
+        })
       });
+      const data = await res.json();
       if (data.error) {
         alert(data.error);
         return;
       }
       setResult(data);
-    } catch {
+    } catch (err) {
       alert('Error submitting examination. Please try again.');
     } finally {
       setLoading(false);
@@ -234,84 +106,233 @@ export default function App() {
   const currentQuestion = questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === questions.length - 1;
 
-  if (isAdminView) {
-    return (
-      <div className="portal-container">
-        <header className="portal-header">
-          <h1>RDE Technical Assessment Portal</h1>
-          <p className="subtitle">Administrator Results Dashboard</p>
-          <ThemeToggle isDarkMode={isDarkMode} onToggle={toggleTheme} />
-        </header>
-
-        {!isAdminAuthenticated ? (
-          <AdminLogin
-            adminPassInput={adminPassInput}
-            setAdminPassInput={setAdminPassInput}
-            handleAdminLogin={handleAdminLogin}
-            adminPassError={adminPassError}
-          />
-        ) : (
-          <AdminTable
-            adminResults={adminResults}
-            adminLoading={adminLoading}
-            adminFetchError={adminFetchError}
-            fetchAdminResults={fetchAdminResults}
-            setReviewCandidate={setReviewCandidate}
-          />
-        )}
-
-        <ReviewModal
-          reviewCandidate={reviewCandidate}
-          setReviewCandidate={setReviewCandidate}
-          API_BASE_URL={API_BASE_URL}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="portal-container">
-      {(!isExamStarted || isAdminView) && (
-        <header className="portal-header">
-          <h1>RDE Technical Assessment Portal</h1>
-          <p className="subtitle">Official Component & Device Identification Evaluation</p>
-          <ThemeToggle isDarkMode={isDarkMode} onToggle={toggleTheme} />
-        </header>
-      )}
+      <header className="portal-header">
+        <h1>RDE Technical Assessment Portal</h1>
+        <p className="subtitle">Official Component & Device Identification Evaluation</p>
+      </header>
 
       {!isExamStarted ? (
-        <CandidateForm
-          candidateName={candidateName}
-          setCandidateName={setCandidateName}
-          handleStartExam={handleStartExam}
-          error={error}
-        />
-      ) : result ? (
-        <ResultSummary result={result} />
-      ) : (
-        <ExamCard
-          candidateName={candidateName}
-          currentQuestionIndex={currentQuestionIndex}
-          questions={questions}
-          currentQuestion={currentQuestion}
-          answers={answers}
-          handleOptionSelect={handleOptionSelect}
-          handleNextQuestion={handleNextQuestion}
-          isLastQuestion={isLastQuestion}
-          loading={loading}
-          setLightboxImage={setLightboxImage}
-          setIsLightboxOpen={setIsLightboxOpen}
-          isDarkMode={isDarkMode}
-          toggleTheme={toggleTheme}
-          API_BASE_URL={API_BASE_URL}
-        />
-      )}
+        <div className="card compact-card">
+          <div className="card-header">
+            <h2>Candidate Verification</h2>
+            <p className="greeting">Good luck on your examination!</p>
+          </div>
+          <form onSubmit={handleStartExam}>
+            <div className="form-group">
+              <label className="form-label">
+                Candidate Full Name
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="e.g. John Doe"
+                value={candidateName}
+                onChange={(e) => setCandidateName(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary">
+              Start Examination
+            </button>
+          </form>
+          {error && <p className="error-message">{error}</p>}
+        </div>
+      ) : result && !isReviewMode ? (
+        /* RESULT PAGE */
+        <div className="card">
+          <h2>Assessment Summary</h2>
+          <div className={`result-banner ${result.status === 'PASSED' ? 'pass' : 'fail'}`}>
+            <h3>Status: {result.status}</h3>
+            <p className="result-score">
+              Score: {result.score} / {result.total} ({result.percentage}%)
+            </p>
+          </div>
+          <div className="result-details">
+            <p><strong>Candidate Name:</strong> {result.studentName}</p>
+            <p><strong>Start Date & Time:</strong> {result.startTime}</p>
+            <p><strong>Completion Date & Time:</strong> {result.timestamp}</p>
+          </div>
 
-      <LightboxModal
-        isOpen={isLightboxOpen}
-        image={lightboxImage}
-        onClose={() => setIsLightboxOpen(false)}
-      />
+          <div className="action-bar-flex">
+            <button onClick={() => setIsReviewMode(true)} className="btn btn-primary" style={{ width: 'auto' }}>
+              Review Submitted Answers
+            </button>
+          </div>
+
+          <div className="assessment-locked">
+            🔒 <strong>Assessment Locked:</strong> Multiple attempts are prohibited for this examination.
+          </div>
+        </div>
+      ) : (
+        /* EXAM QUESTION & REVIEW PAGE */
+        <div>
+          {isReviewMode ? (
+            <div className="instruction-box review">
+              <strong>Review Mode Active:</strong> Displayed below are your selected responses alongside the official <span className="review-accent">Correct Answer Keys</span> for evaluation.
+            </div>
+          ) : (
+            <div className="instruction-box">
+              <strong>General Instructions:</strong> Analyze each component image carefully. Select the correct classification, package type, or viewing orientation from the options provided below each image.
+            </div>
+          )}
+
+          <div className="sticky-tracker">
+            <div><strong>Candidate:</strong> {candidateName}</div>
+            <div>
+              {isReviewMode ? (
+                <strong style={{ color: result.status === 'PASSED' ? '#16a34a' : '#dc2626' }}>
+                  Final Score: {result.score} / {result.total}
+                </strong>
+              ) : (
+                <span><strong>Question {currentQuestionIndex + 1} of {questions.length}</strong></span>
+              )}
+            </div>
+          </div>
+
+          {isReviewMode ? (
+            /* REVIEW MODE: Show all questions */
+            questions.map((q) => {
+              const userAnswer = answers[q.questionNo];
+              const correctAnswer = result?.answerKey?.[String(q.questionNo)];
+
+              return (
+                <div key={q.questionNo} className="card">
+                  <h3 className="question-number">
+                    {q.questionNo}.
+                  </h3>
+
+                  {q.questionText && q.questionText.trim() !== '' && (
+                    <p className="question-text">
+                      {q.questionText}
+                    </p>
+                  )}
+
+                  {q.imageFileName && (
+                    <div className="asset-view">
+                      <img
+                        src={`${API_BASE_URL}/static/images/${q.imageFileName}`}
+                        alt={`Item #${q.questionNo}`}
+                        className="question-asset"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://via.placeholder.com/300x150?text=Image+Not+Found';
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="options-grid">
+                    {Object.entries(q.options).map(([key, val]) => {
+                      let cellClass = 'option-cell';
+                      const isUserPick = key === userAnswer;
+                      const isCorrectPick = key === correctAnswer;
+
+                      if (isCorrectPick) {
+                        cellClass += ' correct-answer';
+                      } else if (isUserPick && !isCorrectPick) {
+                        cellClass += ' wrong-answer';
+                      }
+
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={cellClass}
+                          disabled
+                        >
+                          <span className="badge">{key}</span> {val}
+
+                          <div className="review-badge-group">
+                            {isUserPick && (
+                              <span className={`review-badge user-answer${isCorrectPick ? ' is-correct' : ''}`}>
+                                YOUR ANSWER
+                              </span>
+                            )}
+                            {isCorrectPick && (
+                              <span className="review-badge correct-key">
+                                ✓ CORRECT KEY
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            /* EXAM MODE: Show one question at a time */
+            currentQuestion && (
+              <div className="card">
+                <h3 className="question-number">
+                  {currentQuestion.questionNo}.
+                </h3>
+
+                {currentQuestion.questionText && currentQuestion.questionText.trim() !== '' && (
+                  <p className="question-text">
+                    {currentQuestion.questionText}
+                  </p>
+                )}
+
+                {currentQuestion.imageFileName && (
+                  <div className="asset-view">
+                    <img
+                      src={`${API_BASE_URL}/static/images/${currentQuestion.imageFileName}`}
+                      alt={`Item #${currentQuestion.questionNo}`}
+                      className="question-asset"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/300x150?text=Image+Not+Found';
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="options-grid">
+                  {Object.entries(currentQuestion.options).map(([key, val]) => {
+                    let cellClass = 'option-cell';
+                    const isUserPick = key === answers[currentQuestion.questionNo];
+
+                    if (isUserPick) {
+                      cellClass += ' active';
+                    }
+
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={cellClass}
+                        onClick={() => handleOptionSelect(currentQuestion.questionNo, key)}
+                      >
+                        <span className="badge">{key}</span> {val}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )
+          )}
+
+          <div className="action-bar">
+            {isReviewMode ? (
+              <button onClick={() => setIsReviewMode(false)} className="btn btn-secondary">
+                Back to Assessment Summary
+              </button>
+            ) : (
+              <button
+                onClick={handleNextQuestion}
+                className={`btn ${isLastQuestion ? 'btn-success' : 'btn-primary'}`}
+                disabled={loading || !answers[currentQuestion?.questionNo]}
+              >
+                {loading ? 'Submitting...' : isLastQuestion ? 'Submit Examination' : 'Next Question'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

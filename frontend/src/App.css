@@ -1,11 +1,16 @@
+/* ========================================================
+   RDE Assessment Portal — Enterprise UI
+   ======================================================== */
+
+/* --- Portal Layout --- */
 .portal-container {
   max-width: 920px;
   margin: 0 auto;
-  padding: 10px 24px 10px;
+  padding: 48px 24px 64px;
 }
 
+/* --- Header --- */
 .portal-header {
-  position: relative;
   text-align: center;
   margin-bottom: 40px;
 }
@@ -25,40 +30,7 @@
   font-weight: 400;
 }
 
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  line-height: 1;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-.theme-toggle:hover {
-  border-color: var(--color-accent-border);
-  color: var(--color-accent);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
-
-.theme-toggle:active {
-  transform: scale(0.95);
-}
-
-.portal-header .theme-toggle {
-  position: absolute;
-  top: 6px;
-  right: 0;
-}
-
+/* --- Cards --- */
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -68,6 +40,7 @@
   margin-bottom: 24px;
 }
 
+/* --- Compact Card (Entry Form) --- */
 .compact-card {
   max-width: 480px;
   margin: 0 auto 24px;
@@ -91,6 +64,7 @@
   font-weight: 400;
 }
 
+/* --- Form --- */
 .form-group {
   margin-bottom: 20px;
 }
@@ -126,6 +100,7 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* --- Buttons --- */
 .btn {
   padding: 12px 24px;
   border-radius: var(--radius-md);
@@ -186,6 +161,7 @@
   background-color: var(--color-neutral-hover);
 }
 
+/* --- Instruction Banner --- */
 .instruction-box {
   background-color: var(--color-accent-light);
   border-left: 4px solid var(--color-accent-border);
@@ -208,6 +184,7 @@
   font-weight: 700;
 }
 
+/* --- Sticky Progress Tracker --- */
 .sticky-tracker {
   position: sticky;
   top: 16px;
@@ -231,6 +208,7 @@
   font-weight: 700;
 }
 
+/* --- Error Message --- */
 .error-message {
   color: var(--color-danger);
   margin-top: 12px;
@@ -238,6 +216,7 @@
   font-weight: 500;
 }
 
+/* --- Question Card Elements --- */
 .question-number {
   margin: 0 0 12px 0;
   font-size: 1.25rem;
@@ -255,6 +234,7 @@
   line-height: 1.6;
 }
 
+/* --- Image Asset Display --- */
 .asset-view {
   text-align: center;
   margin: 16px 0 28px 0;
@@ -266,11 +246,12 @@
 
 .question-asset {
   max-width: 100%;
-  max-height: 220px;
+  max-height: 320px;
   border-radius: var(--radius-md);
   object-fit: contain;
 }
 
+/* --- Options Grid --- */
 .options-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -283,6 +264,7 @@
   }
 }
 
+/* --- Option Cells (MCQ buttons) --- */
 .option-cell {
   background-color: var(--color-white) !important;
   color: var(--color-text-secondary) !important;
@@ -320,6 +302,7 @@
   color: var(--color-white);
 }
 
+/* --- Answer Key Badge (A, B, C, D) --- */
 .badge {
   background-color: #e2e8f0;
   color: var(--color-text-secondary);
@@ -333,6 +316,7 @@
   text-align: center;
 }
 
+/* --- Review Mode: Option States --- */
 .option-cell.correct-answer {
   background-color: #dcfce7 !important;
   border-color: var(--color-success) !important;
@@ -356,6 +340,7 @@
   color: var(--color-white) !important;
 }
 
+/* --- Review Mode Badges (YOUR ANSWER / CORRECT KEY) --- */
 .review-badge-group {
   margin-left: auto;
   display: flex;
@@ -386,6 +371,7 @@
   background-color: #15803d;
 }
 
+/* --- Action Bar --- */
 .action-bar {
   text-align: center;
   margin-top: 32px;
@@ -398,6 +384,7 @@
   justify-content: center;
 }
 
+/* --- Result Banner --- */
 .result-banner {
   padding: 28px 24px;
   border-radius: var(--radius-lg);
@@ -428,76 +415,7 @@
   letter-spacing: -0.3px;
 }
 
-.congrats-banner {
-  margin: 20px 0 0 0;
-  padding: 18px 20px;
-  text-align: center;
-  font-size: 1.375rem;
-  font-weight: 800;
-  color: var(--color-success);
-  background-color: var(--color-success-light);
-  border: 2px solid var(--color-success-border);
-  border-radius: var(--radius-md);
-  line-height: 1.4;
-  animation: congratsPop 0.5s ease;
-}
-
-@keyframes congratsPop {
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.encourage-banner {
-  margin: 20px 0 0 0;
-  padding: 18px 20px;
-  text-align: center;
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--color-danger);
-  background-color: var(--color-danger-light);
-  border: 2px solid var(--color-danger);
-  border-radius: var(--radius-md);
-  line-height: 1.5;
-  animation: encourageFadeIn 0.6s ease;
-}
-
-@keyframes encourageFadeIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.result-banner.fail {
-  background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
-  border: 2px solid rgba(255, 255, 255, 0.18);
-}
-
-.result-banner.fail-animate {
-  animation:
-    resultShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.25s,
-    failRedGlow 1.2s ease-out;
-}
-
-@keyframes resultShake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-9px); }
-  20%, 40%, 60%, 80% { transform: translateX(9px); }
-}
-
-@keyframes failRedGlow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
-    opacity: 0.6;
-  }
-  70% {
-    box-shadow: 0 0 0 18px rgba(220, 38, 38, 0);
-    opacity: 1;
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-    opacity: 1;
-  }
-}
-
+/* --- Result Details --- */
 .result-details {
   display: flex;
   flex-direction: column;
@@ -511,6 +429,7 @@
   color: var(--color-text-primary);
 }
 
+/* --- Assessment Locked Notice --- */
 .assessment-locked {
   margin-top: 24px;
   padding: 14px 16px;
@@ -527,6 +446,7 @@
   color: var(--color-text-secondary);
 }
 
+/* --- Responsive --- */
 @media (max-width: 640px) {
   .portal-container {
     padding: 24px 16px 48px;
@@ -534,10 +454,6 @@
 
   .portal-header h1 {
     font-size: 1.375rem;
-  }
-
-  .portal-header {
-    padding-top: 48px;
   }
 
   .card {
@@ -552,564 +468,11 @@
     padding: 12px 20px;
   }
 
-  .sticky-tracker .theme-toggle {
-    align-self: center;
-  }
-
   .result-banner {
     padding: 20px 16px;
   }
 
   .result-score {
     font-size: 1.25rem;
-  }
-}
-
-/* ── Admin Dashboard ── */
-
-.admin-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.admin-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--color-heading);
-  margin: 0;
-}
-
-.admin-refresh-btn {
-  width: auto;
-  padding: 10px 22px;
-  font-size: 0.875rem;
-}
-
-.admin-table-card {
-  overflow: hidden;
-  padding: 0;
-}
-
-.admin-table-wrapper {
-  overflow-x: auto;
-}
-
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.admin-table thead {
-  background: var(--color-bg);
-  border-bottom: 2px solid var(--color-border);
-}
-
-.admin-table th {
-  padding: 14px 16px;
-  text-align: left;
-  font-weight: 700;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  letter-spacing: 0.3px;
-}
-
-.admin-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-primary);
-}
-
-.admin-table tbody tr:hover {
-  background-color: var(--color-bg);
-}
-
-.admin-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.admin-name {
-  font-weight: 600;
-}
-
-.admin-status {
-  display: inline-block;
-  padding: 3px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--color-white);
-}
-
-.admin-status.passed {
-  background-color: var(--color-success);
-}
-
-.admin-status.failed {
-  background-color: var(--color-danger);
-}
-
-.admin-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--color-text-muted);
-  font-size: 0.9375rem;
-}
-
-.admin-record-count {
-  padding: 14px 16px;
-  text-align: right;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
-  margin: 0;
-}
-
-@media (max-width: 640px) {
-  .admin-toolbar {
-    flex-direction: column;
-    gap: 12px;
-    align-items: stretch;
-  }
-
-  .admin-refresh-btn {
-    width: 100%;
-  }
-
-  .admin-table th,
-  .admin-table td {
-    padding: 10px 10px;
-    font-size: 0.75rem;
-  }
-}
-
-/* ── Lightbox Image Viewer ── */
-
-.clickable-image {
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.clickable-image:hover {
-  opacity: 0.85;
-}
-
-.lightbox-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  animation: lightboxFadeIn 0.2s ease;
-}
-
-@keyframes lightboxFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.lightbox-content {
-  max-width: 90vw;
-  max-height: 90vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.lightbox-image {
-  max-width: 90vw;
-  max-height: 90vh;
-  object-fit: contain;
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
-  animation: lightboxZoomIn 0.25s ease;
-}
-
-@keyframes lightboxZoomIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.lightbox-close {
-  position: absolute;
-  top: 20px;
-  right: 28px;
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border: none;
-  font-size: 2rem;
-  font-weight: 300;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease, transform 0.2s ease;
-  line-height: 1;
-  padding: 0;
-}
-
-.lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-}
-
-/* ── Dark Mode Overrides ── */
-
-body.dark-mode .form-control {
-  background-color: #0b1220;
-}
-
-body.dark-mode .sticky-tracker {
-  background: rgba(15, 23, 42, 0.92);
-}
-
-body.dark-mode .asset-view {
-  background: #0b1220;
-}
-
-body.dark-mode .instruction-box {
-  background-color: #172554;
-  border-left-color: var(--color-accent-border);
-  color: #dbeafe;
-}
-
-body.dark-mode .badge {
-  background-color: #334155;
-}
-
-body.dark-mode .option-cell {
-  background-color: #0f172a !important;
-}
-
-body.dark-mode .option-cell:hover {
-  background-color: #1e293b !important;
-}
-
-body.dark-mode .option-cell.active {
-  background-color: #1e3a8a !important;
-  color: #dbeafe !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-}
-
-body.dark-mode .option-cell.active .badge {
-  background-color: var(--color-accent);
-  color: #ffffff;
-}
-
-body.dark-mode .option-cell.correct-answer {
-  background-color: #14532d !important;
-  color: #bbf7d0 !important;
-}
-
-body.dark-mode .option-cell.correct-answer .badge {
-  background-color: var(--color-success) !important;
-}
-
-body.dark-mode .option-cell.wrong-answer {
-  background-color: #7f1d1d !important;
-  color: #fecaca !important;
-}
-
-body.dark-mode .option-cell.wrong-answer .badge {
-  background-color: var(--color-danger) !important;
-}
-
-/* ── Compact Assessment View (fits within viewport height, no scrolling) ── */
-
-.exam-view .instruction-box {
-  margin-bottom: 12px;
-  padding: 12px 16px;
-}
-
-.exam-view .sticky-tracker {
-  top: 8px;
-  padding: 10px 20px;
-  margin-bottom: 14px;
-}
-
-.exam-view .card {
-  padding: 16px;
-  margin-bottom: 0;
-}
-
-.exam-view .question-number {
-  margin-bottom: 8px;
-}
-
-.exam-view .question-text {
-  margin-bottom: 10px;
-}
-
-.exam-view .asset-view {
-  margin: 8px 0 14px 0;
-  padding: 12px;
-}
-
-.exam-view .question-asset {
-  max-height: 220px;
-  object-fit: contain;
-}
-
-.exam-view .options-grid {
-  gap: 10px;
-}
-
-.exam-view .option-cell {
-  padding: 10px 14px;
-}
-
-.exam-view .action-bar {
-  margin-top: 16px;
-}
-
-/* ── Admin: Candidate Exam Review Modal ── */
-
-.admin-review-btn {
-  width: auto;
-  padding: 8px 16px;
-  font-size: 0.8125rem;
-  white-space: nowrap;
-}
-
-.review-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 24px 16px;
-  z-index: 3000;
-  animation: lightboxFadeIn 0.2s ease;
-}
-
-.review-modal {
-  width: 100%;
-  max-width: 720px;
-  max-height: 88vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-
-.review-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 22px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.review-modal-header h3 {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--color-heading);
-}
-
-.review-modal-close {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  color: var(--color-text-secondary);
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: all var(--transition-fast);
-}
-
-.review-modal-close:hover {
-  color: var(--color-danger);
-  border-color: var(--color-danger);
-}
-
-.review-candidate-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px 18px;
-  padding: 16px 22px;
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.875rem;
-}
-
-.review-candidate-info p {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.review-candidate-info strong {
-  color: var(--color-text-primary);
-  margin-right: 4px;
-}
-
-.review-candidate-info .admin-status {
-  margin-left: 4px;
-}
-
-.review-breakdown {
-  padding: 18px 22px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.review-item {
-  border: 1px solid var(--color-border);
-  border-left-width: 4px;
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  background: var(--color-bg);
-}
-
-.review-item.is-correct {
-  border-left-color: var(--color-success);
-  background-color: var(--color-success-light);
-}
-
-.review-item.is-wrong {
-  border-left-color: var(--color-danger);
-  background-color: var(--color-danger-light);
-}
-
-.review-item-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.review-item-no {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.review-item-badge {
-  flex-shrink: 0;
-  padding: 3px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  color: var(--color-white);
-}
-
-.review-item-badge.correct {
-  background-color: var(--color-success);
-}
-
-.review-item-badge.wrong {
-  background-color: var(--color-danger);
-}
-
-.review-item-text {
-  margin: 0 0 8px 0;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  line-height: 1.5;
-}
-
-.review-item-image {
-  margin: 0 0 10px 0;
-  padding: 8px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  display: inline-block;
-}
-
-.review-item-image img {
-  display: block;
-  max-height: 110px;
-  max-width: 100%;
-  object-fit: contain;
-  border-radius: var(--radius-sm);
-}
-
-.review-answer-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 4px 0 0 0;
-  font-size: 0.875rem;
-}
-
-.review-answer-label {
-  flex-shrink: 0;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.review-answer-value {
-  font-weight: 700;
-  color: var(--color-text-secondary);
-}
-
-.review-answer-value.correct {
-  color: var(--color-success);
-}
-
-.review-answer-value.wrong {
-  color: var(--color-danger);
-}
-
-.review-empty {
-  text-align: center;
-  padding: 28px 16px;
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
-}
-
-.review-modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 16px 22px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.review-modal-footer .btn {
-  width: auto;
-}
-
-@media (max-width: 640px) {
-  .admin-review-btn {
-    width: 100%;
-  }
-
-  .review-candidate-info {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .review-modal-footer {
-    justify-content: center;
   }
 }
