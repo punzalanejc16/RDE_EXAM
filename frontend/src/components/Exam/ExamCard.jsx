@@ -1,5 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { ImageOff } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
+import { assetUrl } from '../../api/api';
+
+function QuestionImage({ src, alt, onOpen }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="image-unavailable" role="img" aria-label="Image unavailable">
+        <ImageOff size={28} aria-hidden="true" />
+        <span>Image could not be loaded. Check your connection and reload the page.</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      decoding="async"
+      className="question-asset clickable-image"
+      onClick={onOpen}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function ExamCard({
   candidateName,
@@ -11,14 +37,15 @@ export default function ExamCard({
   handleNextQuestion,
   isLastQuestion,
   loading,
+  submitError,
   setLightboxImage,
   setIsLightboxOpen,
   isDarkMode,
-  toggleTheme,
-  API_BASE_URL
+  toggleTheme
 }) {
   const currentQuestionNo = currentQuestion?.questionNo;
   const isAnswered = currentQuestionNo ? Boolean(answers[currentQuestionNo]) : false;
+  const imageSrc = assetUrl(currentQuestion?.imageUrl);
 
   return (
     <div className="exam-view">
@@ -42,21 +69,15 @@ export default function ExamCard({
             <p className="question-text">{currentQuestion.questionText}</p>
           )}
 
-          {currentQuestion.imageFileName && (
+          {imageSrc && (
             <div className="asset-view">
-              <img
-                src={`${API_BASE_URL}/static/images/${currentQuestion.imageFileName}`}
-                alt={`Item #${currentQuestion.questionNo}`}
-                loading="lazy"
-                decoding="async"
-                className="question-asset clickable-image"
-                onClick={() => {
-                  setLightboxImage(`${API_BASE_URL}/static/images/${currentQuestion.imageFileName}`);
+              <QuestionImage
+                key={imageSrc}
+                src={imageSrc}
+                alt={`Item #${currentQuestionIndex + 1}`}
+                onOpen={() => {
+                  setLightboxImage(imageSrc);
                   setIsLightboxOpen(true);
-                }}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://via.placeholder.com/300x150?text=Image+Not+Found';
                 }}
               />
             </div>
@@ -75,6 +96,7 @@ export default function ExamCard({
                     type="button"
                     className={cellClass}
                     onClick={() => handleOptionSelect(currentQuestion.questionNo, key)}
+                    disabled={loading}
                   >
                     <span className="badge">{key}</span> {val}
                   </button>
@@ -89,13 +111,15 @@ export default function ExamCard({
         </div>
       )}
 
+      {submitError && <p className="error-message exam-submit-error" role="alert">{submitError}</p>}
+
       <div className="action-bar">
         <button
           onClick={handleNextQuestion}
           className={`btn ${isLastQuestion ? 'btn-success' : 'btn-primary'}`}
           disabled={loading || !isAnswered}
         >
-          {loading ? 'Submitting...' : isLastQuestion ? 'Submit Examination' : 'Next Question'}
+          {loading ? 'Submitting...' : isLastQuestion ? (submitError ? 'Retry Submission' : 'Submit Examination') : 'Next Question'}
         </button>
       </div>
     </div>

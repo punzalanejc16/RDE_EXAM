@@ -3,23 +3,31 @@ import confetti from 'canvas-confetti';
 import './App.css';
 
 import { shuffleArray, THEME_STORAGE_KEY, getInitialTheme } from './utils/helpers';
-import { 
-  API_BASE_URL, 
-  fetchQuestionsApi, 
-  checkCandidateNameApi, 
-  submitExamApi, 
-  adminLoginApi, 
-  fetchAdminResultsApi 
+import { loadExamProgress, saveExamProgress, clearExamProgress } from './utils/examProgress';
+import { ClipboardList, UserCheck, WifiOff } from 'lucide-react';
+import {
+  assetUrl,
+  getStoredToken,
+  setStoredToken,
+  fetchMeApi,
+  logoutApi,
+  fetchQuestionsApi,
+  startExamApi,
+  submitExamApi,
+  fetchAdminResultsApi,
+  fetchUsersApi
 } from './api/api';
 
-import ThemeToggle from './components/themetoggle';
-import LightboxModal from './components/lightboxmodal';
-import AdminLogin from './components/admin/adminlogin';
-import AdminTable from './components/admin/admintable';
-import ReviewModal from './components/admin/reviewmodal';
-import CandidateForm from './components/exam/CandidateForm';
-import ExamCard from './components/exam/ExamCard';
-import ResultSummary from './components/exam/ResultSummary';
+import ThemeToggle from './components/ThemeToggle';
+import LightboxModal from './components/LightboxModal';
+import SessionBar from './components/SessionBar';
+import AuthPage from './components/Auth/AuthPage';
+import AdminTable from './components/Admin/AdminTable';
+import ReviewModal from './components/Admin/ReviewModal';
+import UserApprovals from './components/Admin/UserApprovals';
+import CandidateWelcome from './components/Exam/CandidateWelcome';
+import ExamCard from './components/Exam/ExamCard';
+import ResultSummary from './components/Exam/ResultSummary';
 
 const initialTheme = getInitialTheme();
 if (initialTheme === 'dark') {
@@ -27,39 +35,96 @@ if (initialTheme === 'dark') {
 }
 
 export default function App() {
-  const [candidateName, setCandidateName] = useState('');
-  const [isExamStarted, setIsExamStarted] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authChecking, setAuthChecking] = useState(() => Boolean(getStoredToken()));
+  const [sessionError, setSessionError] = useState('');
+
+  // Question pool (for the welcome screen) and the ordered questions of the active attempt
   const [questions, setQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [examQuestions, setExamQuestions] = useState([]);
+  const [attemptTicket, setAttemptTicket] = useState(null);
+  const [isExamStarted, setIsExamStarted] = useState(false);
+  const [starting, setStarting] = useState(false);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [submitError, setSubmitError] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(initialTheme === 'dark');
 
-  const [isAdminView, setIsAdminView] = useState(() => {
-    return new URLSearchParams(window.location.search).get('view') === 'admin';
-  });
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminPassInput, setAdminPassInput] = useState('');
-  const [adminPassError, setAdminPassError] = useState('');
+  const [adminTab, setAdminTab] = useState('approvals');
   const [adminResults, setAdminResults] = useState([]);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminFetchError, setAdminFetchError] = useState('');
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersFetchError, setUsersFetchError] = useState('');
   const [reviewCandidate, setReviewCandidate] = useState(null);
 
   const confettiFiredRef = useRef(false);
 
+  const isAdmin = currentUser?.role === 'admin';
+  const isCandidate = currentUser?.role === 'candidate';
+
+  const resetSessionState = () => {
+    setIsExamStarted(false);
+    setQuestions([]);
+    setExamQuestions([]);
+    setAttemptTicket(null);
+    setAnswers({});
+    setResult(null);
+    setError(null);
+    setSubmitError('');
+    setStartTime(null);
+    setCurrentQuestionIndex(0);
+    setAdminTab('approvals');
+    setAdminResults([]);
+    setUsers([]);
+    setReviewCandidate(null);
+    confettiFiredRef.current = false;
+  };
+
+  // explicit = the user pressed Sign Out (end the session on the server and forget saved progress)
+  const handleLogout = ({ explicit = true } = {}) => {
+    if (explicit) {
+      logoutApi().catch(() => { /* token is cleared locally regardless */ });
+      if (currentUser?.role === 'candidate') clearExamProgress(currentUser.id);
+    }
+    setStoredToken(null);
+    setCurrentUser(null);
+    setSessionError('');
+    resetSessionState();
+  };
+
+  const handleAuthenticated = (token, user) => {
+    setStoredToken(token);
+    resetSessionState();
+    setSessionError('');
+    setCurrentUser(user);
+  };
+
+  const restoreSession = async () => {
+    setAuthChecking(true);
+    setSessionError('');
+    try {
+      const data = await fetchMeApi();
+      setCurrentUser(data.user);
+    } catch (err) {
+      // Only a rejected session signs the user out; a network problem keeps the saved session
+      if (err.status === 401 || err.status === 403) setStoredToken(null);
+      else setSessionError(err.message);
+    } finally {
+      setAuthChecking(false);
+    }
+  };
+
   useEffect(() => {
-    const handleUrlChange = () => {
-      const params = new URLSearchParams(window.location.search);
-      setIsAdminView(params.get('view') === 'admin');
-    };
-    window.addEventListener('popstate', handleUrlChange);
-    return () => window.removeEventListener('popstate', handleUrlChange);
+    if (getStoredToken()) restoreSession();
   }, []);
 
   useEffect(() => {
@@ -110,26 +175,46 @@ export default function App() {
   }, [result]);
 
   useEffect(() => {
-    if (isAdminView && isAdminAuthenticated) {
+    if (isAdmin) {
+      fetchUsers();
       fetchAdminResults();
     }
-  }, [isAdminView, isAdminAuthenticated]);
+  }, [isAdmin]);
 
   useEffect(() => {
-    if (!isAdminView) {
-      fetchQuestions();
+    if (isCandidate) {
+      fetchQuestions({ resume: true });
     }
-  }, [isAdminView]);
+  }, [isCandidate]);
+
+  // Save the active attempt on this device after every change
+  useEffect(() => {
+    if (!isCandidate || !isExamStarted || result || !attemptTicket) return;
+    saveExamProgress(currentUser.id, {
+      attemptTicket,
+      startTime,
+      order: examQuestions.map(q => q.questionNo),
+      answers,
+      index: currentQuestionIndex
+    });
+  }, [isCandidate, isExamStarted, result, attemptTicket, startTime, examQuestions, answers, currentQuestionIndex]);
 
   useEffect(() => {
-    if (questions.length > 0 && currentQuestionIndex < questions.length - 1) {
-      const nextQuestion = questions[currentQuestionIndex + 1];
-      if (nextQuestion && nextQuestion.imageFileName) {
-        const img = new Image();
-        img.src = `${API_BASE_URL}/static/images/${nextQuestion.imageFileName}`;
-      }
+    const nextQuestion = examQuestions[currentQuestionIndex + 1];
+    if (nextQuestion?.imageUrl) {
+      const img = new Image();
+      img.src = assetUrl(nextQuestion.imageUrl);
     }
-  }, [currentQuestionIndex, questions]);
+  }, [currentQuestionIndex, examQuestions]);
+
+  // Expired/ended session → back to sign in
+  const handleApiError = (err, setMessage) => {
+    if (err.status === 401) {
+      handleLogout({ explicit: false });
+      return;
+    }
+    setMessage(err.message);
+  };
 
   const fetchAdminResults = async () => {
     setAdminLoading(true);
@@ -138,34 +223,58 @@ export default function App() {
       const data = await fetchAdminResultsApi();
       setAdminResults(data);
     } catch (err) {
-      setAdminFetchError(err.message);
+      handleApiError(err, setAdminFetchError);
     } finally {
       setAdminLoading(false);
     }
   };
 
-  const handleAdminLogin = async (e) => {
-    e.preventDefault();
-    setAdminPassError('');
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    setUsersFetchError('');
     try {
-      const data = await adminLoginApi(adminPassInput);
-      if (data.success) {
-        setIsAdminAuthenticated(true);
-        setAdminPassError('');
-      } else {
-        setAdminPassError(data.error || 'Invalid passphrase. Access denied.');
-      }
-    } catch {
-      setAdminPassError('Cannot connect to authentication server.');
+      const data = await fetchUsersApi();
+      setUsers(data);
+    } catch (err) {
+      handleApiError(err, setUsersFetchError);
+    } finally {
+      setUsersLoading(false);
     }
   };
 
-  const fetchQuestions = async () => {
+  const resumeSavedAttempt = (pool, user) => {
+    const saved = loadExamProgress(user.id);
+    if (!saved) return;
+    const byNo = new Map(pool.map(q => [q.questionNo, q]));
+    const ordered = saved.order.map(no => byNo.get(no)).filter(Boolean);
+    if (ordered.length !== pool.length) {
+      // The exam changed since this attempt was started
+      clearExamProgress(user.id);
+      return;
+    }
+    setExamQuestions(ordered);
+    setAttemptTicket(saved.attemptTicket);
+    setStartTime(saved.startTime);
+    setAnswers(saved.answers || {});
+    setCurrentQuestionIndex(Math.min(Math.max(0, saved.index || 0), ordered.length - 1));
+    setIsExamStarted(true);
+  };
+
+  const fetchQuestions = async ({ resume = false } = {}) => {
+    setQuestionsLoading(true);
+    setError(null);
     try {
       const data = await fetchQuestionsApi();
-      setQuestions(shuffleArray(data));
+      setQuestions(data);
+      if (data.length === 0) {
+        setError('No assessment items are available yet. Please contact the administrator.');
+      } else if (resume) {
+        resumeSavedAttempt(data, currentUser);
+      }
     } catch (err) {
-      setError(err.message);
+      handleApiError(err, setError);
+    } finally {
+      setQuestionsLoading(false);
     }
   };
 
@@ -176,54 +285,89 @@ export default function App() {
     }));
   };
 
-  const handleStartExam = async (e) => {
-    e.preventDefault();
-    const trimmedName = candidateName.trim();
-    if (!trimmedName) {
-      alert('Please enter Candidate Full Name.');
-      return;
-    }
-
+  // Every start is a fresh, server-issued attempt (retakes allowed)
+  const handleStartExam = async () => {
+    setStarting(true);
+    setError(null);
     try {
-      const data = await checkCandidateNameApi(trimmedName);
-      if (data.exists) {
-        alert('This candidate has already completed the assessment. Re-examination is strictly prohibited.');
-        return;
+      const data = await startExamApi();
+      if (!data.questions?.length) {
+        throw new Error('No assessment items are available yet. Please contact the administrator.');
       }
-      setStartTime(new Date().toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+      setQuestions(data.questions);
+      setExamQuestions(shuffleArray(data.questions));
+      setAttemptTicket(data.attemptTicket);
+      setStartTime(data.startTime);
+      setAnswers({});
+      setResult(null);
+      setSubmitError('');
+      setCurrentQuestionIndex(0);
+      confettiFiredRef.current = false;
       setIsExamStarted(true);
-    } catch {
-      alert('Error verifying candidate credentials. Please try again.');
+    } catch (err) {
+      setIsExamStarted(false);
+      setResult(null);
+      handleApiError(err, setError);
+    } finally {
+      setStarting(false);
     }
   };
 
+  const handleBackToDashboard = () => {
+    setIsExamStarted(false);
+    setResult(null);
+    setAnswers({});
+    setExamQuestions([]);
+    setAttemptTicket(null);
+    setCurrentQuestionIndex(0);
+  };
+
   const handleSubmitExam = async () => {
-    if (Object.keys(answers).length < questions.length) {
+    if (Object.keys(answers).length < examQuestions.length) {
       const confirmSubmit = window.confirm('You have unanswered items. Are you sure you want to submit your examination?');
       if (!confirmSubmit) return;
     }
 
     setLoading(true);
+    setSubmitError('');
     try {
-      const data = await submitExamApi({
-        studentName: candidateName,
-        answers: answers,
-        startTime: startTime
-      });
-      if (data.error) {
-        alert(data.error);
+      // Same attemptTicket on retry → the server returns the already-saved result instead of a duplicate
+      const data = await submitExamApi({ attemptTicket, answers });
+      clearExamProgress(currentUser.id);
+      setResult(data);
+      setCurrentUser(prev => ({
+        ...prev,
+        attemptCount: (prev.attemptCount || 0) + (data.alreadySubmitted ? 0 : 1),
+        lastAttempt: {
+          score: data.score,
+          total: data.total,
+          percentage: data.percentage,
+          status: data.status,
+          timestamp: data.timestamp
+        }
+      }));
+    } catch (err) {
+      if (err.status === 401) {
+        handleLogout({ explicit: false });
         return;
       }
-      setResult(data);
-    } catch {
-      alert('Error submitting examination. Please try again.');
+      if (err.status === 400 && /attempt/i.test(err.message)) {
+        // Expired or invalid attempt: it can't be submitted, so start over
+        clearExamProgress(currentUser.id);
+        handleBackToDashboard();
+        setError(err.message);
+        return;
+      }
+      setSubmitError(err.isNetworkError
+        ? `${err.message} Your answers are saved on this device.`
+        : err.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleNextQuestion = () => {
-    const isLastQuestion = currentQuestionIndex === questions.length - 1;
+    const isLastQuestion = currentQuestionIndex === examQuestions.length - 1;
     if (isLastQuestion) {
       handleSubmitExam();
     } else {
@@ -231,24 +375,95 @@ export default function App() {
     }
   };
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === questions.length - 1;
+  const currentQuestion = examQuestions[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === examQuestions.length - 1;
 
-  if (isAdminView) {
+  const header = (subtitle) => (
+    <header className="portal-header">
+      <h1>RDE Technical Assessment Portal</h1>
+      <p className="subtitle">{subtitle}</p>
+      <ThemeToggle isDarkMode={isDarkMode} onToggle={toggleTheme} />
+    </header>
+  );
+
+  if (authChecking) {
     return (
       <div className="portal-container">
-        <header className="portal-header">
-          <h1>RDE Technical Assessment Portal</h1>
-          <p className="subtitle">Administrator Results Dashboard</p>
-          <ThemeToggle isDarkMode={isDarkMode} onToggle={toggleTheme} />
-        </header>
+        {header('Official Component & Device Identification Evaluation')}
+        <div className="card compact-card"><p className="admin-empty">Restoring your session...</p></div>
+      </div>
+    );
+  }
 
-        {!isAdminAuthenticated ? (
-          <AdminLogin
-            adminPassInput={adminPassInput}
-            setAdminPassInput={setAdminPassInput}
-            handleAdminLogin={handleAdminLogin}
-            adminPassError={adminPassError}
+  if (sessionError && !currentUser) {
+    return (
+      <div className="portal-container">
+        {header('Official Component & Device Identification Evaluation')}
+        <div className="card compact-card">
+          <div className="card-header">
+            <div className="welcome-icon locked"><WifiOff size={28} aria-hidden="true" /></div>
+            <h2>Can't Reach the Server</h2>
+            <p className="greeting">{sessionError}</p>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={restoreSession}>
+            Try Again
+          </button>
+          <p className="auth-switch">
+            <button type="button" className="link-btn" onClick={() => handleLogout({ explicit: false })}>
+              Sign in with a different account
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="portal-container">
+        {header('Official Component & Device Identification Evaluation')}
+        <AuthPage onAuthenticated={handleAuthenticated} />
+      </div>
+    );
+  }
+
+  if (isAdmin) {
+    const pendingCount = users.filter(u => u.status === 'pending').length;
+    return (
+      <div className="portal-container admin-container">
+        {header('Administrator Dashboard')}
+        <SessionBar user={currentUser} onLogout={() => handleLogout()} />
+
+        <div className="admin-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={adminTab === 'approvals'}
+            className={`admin-tab ${adminTab === 'approvals' ? 'active' : ''}`}
+            onClick={() => setAdminTab('approvals')}
+          >
+            <UserCheck size={16} aria-hidden="true" /> Account Approvals
+            {pendingCount > 0 && <span className="tab-badge">{pendingCount}</span>}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={adminTab === 'results'}
+            className={`admin-tab ${adminTab === 'results' ? 'active' : ''}`}
+            onClick={() => setAdminTab('results')}
+          >
+            <ClipboardList size={16} aria-hidden="true" /> Exam Results
+          </button>
+        </div>
+
+        {adminTab === 'approvals' ? (
+          <UserApprovals
+            users={users}
+            loading={usersLoading}
+            fetchError={usersFetchError}
+            onRefresh={fetchUsers}
+            onUserChanged={(updated) => setUsers(prev => prev.map(u => (u.id === updated.id ? updated : u)))}
+            onUserDeleted={(id) => setUsers(prev => prev.filter(u => u.id !== id))}
           />
         ) : (
           <AdminTable
@@ -257,13 +472,14 @@ export default function App() {
             adminFetchError={adminFetchError}
             fetchAdminResults={fetchAdminResults}
             setReviewCandidate={setReviewCandidate}
+            onResultDeleted={(id) => setAdminResults(prev => prev.filter(r => r.id !== id))}
           />
         )}
 
         <ReviewModal
           reviewCandidate={reviewCandidate}
           setReviewCandidate={setReviewCandidate}
-          API_BASE_URL={API_BASE_URL}
+          onSessionExpired={() => handleLogout({ explicit: false })}
         />
       </div>
     );
@@ -271,39 +487,46 @@ export default function App() {
 
   return (
     <div className="portal-container">
-      {(!isExamStarted || isAdminView) && (
-        <header className="portal-header">
-          <h1>RDE Technical Assessment Portal</h1>
-          <p className="subtitle">Official Component & Device Identification Evaluation</p>
-          <ThemeToggle isDarkMode={isDarkMode} onToggle={toggleTheme} />
-        </header>
+      {(!isExamStarted || result) && (
+        <>
+          {header('Official Component & Device Identification Evaluation')}
+          <SessionBar user={currentUser} onLogout={() => handleLogout()} />
+        </>
       )}
 
       {!isExamStarted ? (
-        <CandidateForm
-          candidateName={candidateName}
-          setCandidateName={setCandidateName}
-          handleStartExam={handleStartExam}
+        <CandidateWelcome
+          user={currentUser}
+          questionCount={questions.length}
+          questionsLoading={questionsLoading}
+          starting={starting}
+          onStart={handleStartExam}
+          onRetry={() => fetchQuestions()}
           error={error}
         />
       ) : result ? (
-        <ResultSummary result={result} />
+        <ResultSummary
+          result={result}
+          onBackToDashboard={handleBackToDashboard}
+          onRetake={handleStartExam}
+          retaking={starting}
+        />
       ) : (
         <ExamCard
-          candidateName={candidateName}
+          candidateName={currentUser.fullName}
           currentQuestionIndex={currentQuestionIndex}
-          questions={questions}
+          questions={examQuestions}
           currentQuestion={currentQuestion}
           answers={answers}
           handleOptionSelect={handleOptionSelect}
           handleNextQuestion={handleNextQuestion}
           isLastQuestion={isLastQuestion}
           loading={loading}
+          submitError={submitError}
           setLightboxImage={setLightboxImage}
           setIsLightboxOpen={setIsLightboxOpen}
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
-          API_BASE_URL={API_BASE_URL}
         />
       )}
 

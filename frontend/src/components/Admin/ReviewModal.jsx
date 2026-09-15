@@ -1,7 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { assetUrl, fetchResultDetailApi } from '../../api/api';
+import { formatDuration } from '../../utils/helpers';
 
-export default function ReviewModal({ reviewCandidate, setReviewCandidate, API_BASE_URL }) {
+export default function ReviewModal({ reviewCandidate, setReviewCandidate, onSessionExpired }) {
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const resultId = reviewCandidate?.id;
+
+  // The results list is lightweight; load the per-question breakdown only when a review is opened
+  useEffect(() => {
+    if (!resultId) return undefined;
+    let cancelled = false;
+    setDetail(null);
+    setError('');
+    setLoading(true);
+    fetchResultDetailApi(resultId)
+      .then(data => { if (!cancelled) setDetail(data); })
+      .catch(err => {
+        if (cancelled) return;
+        if (err.status === 401) onSessionExpired();
+        else setError(err.message);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [resultId, reloadKey]);
+
   if (!reviewCandidate) return null;
+
+  const record = detail || reviewCandidate;
+  const breakdown = detail?.detailedBreakdown || [];
 
   return (
     <div className="review-modal-overlay" onClick={() => setReviewCandidate(null)}>
@@ -19,21 +48,32 @@ export default function ReviewModal({ reviewCandidate, setReviewCandidate, API_B
         </div>
 
         <div className="review-candidate-info">
-          <p><strong>Full Name:</strong> {reviewCandidate.studentName}</p>
-          <p><strong>Score:</strong> {reviewCandidate.score} / {reviewCandidate.total}</p>
-          <p><strong>Percentage:</strong> {reviewCandidate.percentage}%</p>
+          <p><strong>Full Name:</strong> {record.studentName}</p>
+          {record.attemptNumber && <p><strong>Attempt:</strong> #{record.attemptNumber}</p>}
+          <p><strong>Score:</strong> {record.score} / {record.total}</p>
+          <p><strong>Percentage:</strong> {record.percentage}%</p>
           <p>
             <strong>Status:</strong>{' '}
-            <span className={`admin-status ${reviewCandidate.status === 'PASSED' ? 'passed' : 'failed'}`}>
-              {reviewCandidate.status}
+            <span className={`admin-status ${record.status === 'PASSED' ? 'passed' : 'failed'}`}>
+              {record.status}
             </span>
           </p>
-          <p><strong>Completion Time:</strong> {reviewCandidate.timestamp}</p>
+          <p><strong>Completion Time:</strong> {record.timestamp}</p>
+          {record.durationSeconds != null && <p><strong>Duration:</strong> {formatDuration(record.durationSeconds)}</p>}
         </div>
 
         <div className="review-breakdown">
-          {Array.isArray(reviewCandidate.detailedBreakdown) && reviewCandidate.detailedBreakdown.length > 0 ? (
-            reviewCandidate.detailedBreakdown.map((item) => {
+          {loading ? (
+            <p className="review-empty">Loading answers...</p>
+          ) : error ? (
+            <div className="review-empty">
+              <p className="error-message">{error}</p>
+              <button type="button" className="btn btn-secondary" style={{ width: 'auto', marginTop: 12 }} onClick={() => setReloadKey(k => k + 1)}>
+                Try Again
+              </button>
+            </div>
+          ) : breakdown.length > 0 ? (
+            breakdown.map((item) => {
               const isCorrect = item.isCorrect;
               return (
                 <div key={item.questionNo} className={`review-item ${isCorrect ? 'is-correct' : 'is-wrong'}`}>
@@ -43,10 +83,10 @@ export default function ReviewModal({ reviewCandidate, setReviewCandidate, API_B
                       {isCorrect ? '✓ Correct' : '✗ Wrong'}
                     </span>
                   </div>
-                  {item.imageFileName && (
+                  {item.imageUrl && (
                     <div className="review-item-image">
                       <img
-                        src={`${API_BASE_URL}/static/images/${item.imageFileName}`}
+                        src={assetUrl(item.imageUrl)}
                         alt={`Item #${item.questionNo} image`}
                         loading="lazy"
                         decoding="async"
@@ -55,7 +95,7 @@ export default function ReviewModal({ reviewCandidate, setReviewCandidate, API_B
                   )}
                   {item.questionText && <p className="review-item-text">{item.questionText}</p>}
                   <p className="review-answer-row">
-                    <span className="review-answer-label">Your Answer:</span>
+                    <span className="review-answer-label">Candidate Answer:</span>
                     <span className={`review-answer-value ${isCorrect ? 'correct' : 'wrong'}`}>
                       {item.candidateAnswer
                         ? `${item.candidateAnswer}${item.candidateAnswerText ? ` - ${item.candidateAnswerText}` : ''}`

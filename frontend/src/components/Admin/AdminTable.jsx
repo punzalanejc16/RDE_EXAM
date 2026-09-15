@@ -1,6 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Trash2 } from 'lucide-react';
+import { deleteResultApi } from '../../api/api';
+import ConfirmDialog from '../ConfirmDialog';
 
-export default function AdminTable({ adminResults, adminLoading, adminFetchError, fetchAdminResults, setReviewCandidate }) {
+export default function AdminTable({ adminResults, adminLoading, adminFetchError, fetchAdminResults, setReviewCandidate, onResultDeleted }) {
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const closeDialog = () => {
+    setPendingDelete(null);
+    setDeleteError('');
+  };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteResultApi(pendingDelete.id);
+      onResultDeleted(pendingDelete.id);
+      setPendingDelete(null);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div>
       <div className="admin-toolbar">
@@ -28,6 +54,7 @@ export default function AdminTable({ adminResults, adminLoading, adminFetchError
                 <tr>
                   <th>#</th>
                   <th>Candidate Full Name</th>
+                  <th>Attempt</th>
                   <th>Score</th>
                   <th>Percentage</th>
                   <th>Status</th>
@@ -38,9 +65,10 @@ export default function AdminTable({ adminResults, adminLoading, adminFetchError
               </thead>
               <tbody>
                 {adminResults.map((r, i) => (
-                  <tr key={i}>
+                  <tr key={r.id || i}>
                     <td>{i + 1}</td>
                     <td className="admin-name">{r.studentName}</td>
+                    <td>{r.attemptNumber ? `#${r.attemptNumber}` : '—'}</td>
                     <td>{r.score} / {r.total}</td>
                     <td>{r.percentage}%</td>
                     <td>
@@ -51,13 +79,24 @@ export default function AdminTable({ adminResults, adminLoading, adminFetchError
                     <td>{r.startTime || 'N/A'}</td>
                     <td>{r.timestamp}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="btn btn-secondary admin-review-btn"
-                        onClick={() => setReviewCandidate(r)}
-                      >
-                        Review Exam
-                      </button>
+                      <div className="row-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary admin-review-btn"
+                          onClick={() => setReviewCandidate(r)}
+                        >
+                          Review Exam
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn danger"
+                          onClick={() => setPendingDelete(r)}
+                          disabled={!r.id}
+                          title="Delete submission"
+                        >
+                          <Trash2 size={15} aria-hidden="true" /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -69,6 +108,25 @@ export default function AdminTable({ adminResults, adminLoading, adminFetchError
           Total Records: {adminResults.length}
         </p>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete Submission?"
+        message="Are you sure you want to delete this submission? This action cannot be undone."
+        details={pendingDelete && (
+          <>
+            <strong>{pendingDelete.studentName}</strong>
+            {pendingDelete.attemptNumber ? ` · Attempt #${pendingDelete.attemptNumber}` : ''}
+            <span>{pendingDelete.score} / {pendingDelete.total} ({pendingDelete.percentage}%) · {pendingDelete.status}</span>
+            <span>{pendingDelete.timestamp}</span>
+          </>
+        )}
+        confirmLabel="Delete Submission"
+        busy={deleting}
+        error={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={closeDialog}
+      />
     </div>
   );
 }
