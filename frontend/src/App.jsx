@@ -4,7 +4,7 @@ import './App.css';
 
 import { shuffleArray, THEME_STORAGE_KEY, getInitialTheme } from './utils/helpers';
 import { loadExamProgress, saveExamProgress, clearExamProgress } from './utils/examProgress';
-import { ClipboardList, UserCheck, WifiOff } from 'lucide-react';
+import { ClipboardList, UserCheck, KeyRound, WifiOff } from 'lucide-react';
 import {
   assetUrl,
   getStoredToken,
@@ -15,7 +15,8 @@ import {
   startExamApi,
   submitExamApi,
   fetchAdminResultsApi,
-  fetchUsersApi
+  fetchUsersApi,
+  fetchPasswordResetsApi
 } from './api/api';
 
 import ThemeToggle from './components/ThemeToggle';
@@ -25,6 +26,7 @@ import AuthPage from './components/Auth/AuthPage';
 import AdminTable from './components/Admin/AdminTable';
 import ReviewModal from './components/Admin/ReviewModal';
 import UserApprovals from './components/Admin/UserApprovals';
+import PasswordResets from './components/Admin/PasswordResets';
 import CandidateWelcome from './components/Exam/CandidateWelcome';
 import ExamCard from './components/Exam/ExamCard';
 import ResultSummary from './components/Exam/ResultSummary';
@@ -64,6 +66,9 @@ export default function App() {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersFetchError, setUsersFetchError] = useState('');
+  const [resets, setResets] = useState([]);
+  const [resetsLoading, setResetsLoading] = useState(false);
+  const [resetsFetchError, setResetsFetchError] = useState('');
   const [reviewCandidate, setReviewCandidate] = useState(null);
 
   const confettiFiredRef = useRef(false);
@@ -85,6 +90,7 @@ export default function App() {
     setAdminTab('approvals');
     setAdminResults([]);
     setUsers([]);
+    setResets([]);
     setReviewCandidate(null);
     confettiFiredRef.current = false;
   };
@@ -178,6 +184,7 @@ export default function App() {
     if (isAdmin) {
       fetchUsers();
       fetchAdminResults();
+      fetchResets();
     }
   }, [isAdmin]);
 
@@ -258,6 +265,18 @@ export default function App() {
     setAnswers(saved.answers || {});
     setCurrentQuestionIndex(Math.min(Math.max(0, saved.index || 0), ordered.length - 1));
     setIsExamStarted(true);
+  };
+
+  const fetchResets = async () => {
+    setResetsLoading(true);
+    setResetsFetchError('');
+    try {
+      setResets(await fetchPasswordResetsApi());
+    } catch (err) {
+      handleApiError(err, setResetsFetchError);
+    } finally {
+      setResetsLoading(false);
+    }
   };
 
   const fetchQuestions = async ({ resume = false } = {}) => {
@@ -429,6 +448,7 @@ export default function App() {
 
   if (isAdmin) {
     const pendingCount = users.filter(u => u.status === 'pending').length;
+    const pendingResetCount = resets.filter(r => r.status === 'pending').length;
     return (
       <div className="portal-container admin-container">
         {header('Administrator Dashboard')}
@@ -444,6 +464,16 @@ export default function App() {
           >
             <UserCheck size={16} aria-hidden="true" /> Account Approvals
             {pendingCount > 0 && <span className="tab-badge">{pendingCount}</span>}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={adminTab === 'resets'}
+            className={`admin-tab ${adminTab === 'resets' ? 'active' : ''}`}
+            onClick={() => setAdminTab('resets')}
+          >
+            <KeyRound size={16} aria-hidden="true" /> Password Resets
+            {pendingResetCount > 0 && <span className="tab-badge">{pendingResetCount}</span>}
           </button>
           <button
             type="button"
@@ -464,6 +494,14 @@ export default function App() {
             onRefresh={fetchUsers}
             onUserChanged={(updated) => setUsers(prev => prev.map(u => (u.id === updated.id ? updated : u)))}
             onUserDeleted={(id) => setUsers(prev => prev.filter(u => u.id !== id))}
+          />
+        ) : adminTab === 'resets' ? (
+          <PasswordResets
+            requests={resets}
+            loading={resetsLoading}
+            fetchError={resetsFetchError}
+            onRefresh={fetchResets}
+            onRequestChanged={(updated) => setResets(prev => prev.map(r => (r.id === updated.id ? updated : r)))}
           />
         ) : (
           <AdminTable

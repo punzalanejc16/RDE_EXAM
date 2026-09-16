@@ -55,3 +55,6 @@ login_failures_by_user = RateLimiter(_env_int('LOGIN_FAILURES_PER_ACCOUNT', 5), 
 login_failures_by_ip = RateLimiter(_env_int('LOGIN_FAILURES_PER_IP', 30), 15 * 60)
 # New registrations per IP per hour (raise it if a whole exam room registers from one network)
 registrations_by_ip = RateLimiter(_env_int('REGISTRATIONS_PER_IP_PER_HOUR', 20), 60 * 60)
+# Password reset requests per IP per hour, and wrong reset codes per account
+reset_requests_by_ip = RateLimiter(_env_int('RESET_REQUESTS_PER_IP_PER_HOUR', 10), 60 * 60)
+reset_failures_by_user = RateLimiter(_env_int('RESET_FAILURES_PER_ACCOUNT', 5), 15 * 60)

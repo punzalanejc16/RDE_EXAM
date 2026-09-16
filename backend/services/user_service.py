@@ -37,6 +37,16 @@ def find_by_id(user_id):
         return next((dict(u) for u in store.load() if u['id'] == user_id), None)
 
 
+def find_by_username_or_email(identifier):
+    key = identifier.strip().lower()
+    with store.lock:
+        return next(
+            (dict(u) for u in store.load()
+             if u['username'].lower() == key or (u.get('email') or '').lower() == key),
+            None
+        )
+
+
 def create_user(full_name, username, email, password):
     """Registers a new candidate in pending status. Returns (user, error)."""
     with store.lock:
@@ -93,6 +103,15 @@ def set_user_status(user_id, status):
             u['sessionVersion'] = u.get('sessionVersion', 1) + 1
         u['status'] = status
         u['reviewedAt'] = _now()
+    return _update_user(user_id, apply)
+
+
+def set_password(user_id, password):
+    """Sets a new password and ends every active session for the account."""
+    def apply(u):
+        u['passwordHash'] = generate_password_hash(password)
+        u['sessionVersion'] = u.get('sessionVersion', 1) + 1
+        u['passwordChangedAt'] = _now()
     return _update_user(user_id, apply)
 
 

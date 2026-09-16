@@ -81,6 +81,12 @@ export const loginApi = (username, password) =>
 
 export const fetchMeApi = () => request('/api/auth/me');
 
+export const forgotPasswordApi = (identifier) =>
+  request('/api/auth/forgot-password', { method: 'POST', body: { identifier }, auth: false });
+
+export const resetPasswordApi = (payload) =>
+  request('/api/auth/reset-password', { method: 'POST', body: payload, auth: false });
+
 export const logoutApi = () => request('/api/auth/logout', { method: 'POST', body: {}, timeoutMs: 5000 });
 
 // ── Exam ──
@@ -100,6 +106,14 @@ export const deleteResultApi = (resultId) =>
   request(`/api/admin/results/${resultId}`, { method: 'DELETE' });
 
 export const fetchUsersApi = () => request('/api/admin/users');
+
+export const fetchPasswordResetsApi = () => request('/api/admin/password-resets');
+
+export const approvePasswordResetApi = (requestId) =>
+  request(`/api/admin/password-resets/${requestId}/approve`, { method: 'POST' });
+
+export const denyPasswordResetApi = (requestId) =>
+  request(`/api/admin/password-resets/${requestId}/deny`, { method: 'POST' });
 
 export const approveUserApi = (userId) =>
   request(`/api/admin/users/${userId}/approve`, { method: 'POST' });

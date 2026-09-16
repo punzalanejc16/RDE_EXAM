@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
-  LogIn, UserPlus, User, AtSign, Mail, Lock, Eye, EyeOff,
+  LogIn, UserPlus, User, AtSign, Mail, Lock, Eye, EyeOff, KeyRound, MailQuestion,
   Clock, XCircle, CheckCircle2, AlertCircle, ShieldCheck
 } from 'lucide-react';
-import { loginApi, registerApi } from '../../api/api';
+import { loginApi, registerApi, forgotPasswordApi, resetPasswordApi } from '../../api/api';
 
 const EMPTY_SIGNUP = { fullName: '', username: '', email: '', password: '', confirmPassword: '' };
 
-function InputField({ icon: Icon, label, type = 'text', value, onChange, placeholder, autoComplete, autoFocus, hint, trailing }) {
+function InputField({ icon: Icon, label, type = 'text', value, onChange, placeholder, autoComplete, autoFocus, hint, trailing, footer, required = true }) {
   return (
     <div className="form-group">
       <label className="form-label">{label}</label>
@@ -21,16 +21,17 @@ function InputField({ icon: Icon, label, type = 'text', value, onChange, placeho
           placeholder={placeholder}
           autoComplete={autoComplete}
           autoFocus={autoFocus}
-          required
+          required={required}
         />
         {trailing}
       </div>
       {hint && <p className="form-hint">{hint}</p>}
+      {footer}
     </div>
   );
 }
 
-function PasswordField({ label, value, onChange, placeholder, autoComplete, hint }) {
+function PasswordField({ label, value, onChange, placeholder, autoComplete, hint, footer }) {
   const [visible, setVisible] = useState(false);
   return (
     <InputField
@@ -42,6 +43,7 @@ function PasswordField({ label, value, onChange, placeholder, autoComplete, hint
       placeholder={placeholder}
       autoComplete={autoComplete}
       hint={hint}
+      footer={footer}
       trailing={
         <button
           type="button"
@@ -77,12 +79,63 @@ export default function AuthPage({ onAuthenticated }) {
   const [error, setError] = useState('');
   const [accountStatus, setAccountStatus] = useState(null);
   const [registeredName, setRegisteredName] = useState('');
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [notice, setNotice] = useState('');
+  const [resetForm, setResetForm] = useState({ identifier: '', code: '', password: '', confirmPassword: '' });
 
   const switchMode = (next) => {
     setMode(next);
     setError('');
+    setNotice('');
     setAccountStatus(null);
   };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const data = await forgotPasswordApi(forgotIdentifier.trim());
+      setResetForm(prev => ({ ...prev, identifier: forgotIdentifier.trim() }));
+      setNotice(data.message);
+      setMode('requested');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (resetForm.password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (resetForm.password !== resetForm.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await resetPasswordApi({
+        identifier: resetForm.identifier.trim(),
+        code: resetForm.code.trim(),
+        newPassword: resetForm.password
+      });
+      setLoginForm({ username: resetForm.identifier.trim(), password: '' });
+      setResetForm({ identifier: '', code: '', password: '', confirmPassword: '' });
+      setNotice('Your password has been changed. Please sign in with your new password.');
+      setMode('login');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const updateReset = (field) => (value) => setResetForm(prev => ({ ...prev, [field]: value }));
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -128,6 +181,133 @@ export default function AuthPage({ onAuthenticated }) {
 
   const updateSignup = (field) => (value) => setSignupForm(prev => ({ ...prev, [field]: value }));
   const updateLogin = (field) => (value) => setLoginForm(prev => ({ ...prev, [field]: value }));
+
+  if (mode === 'requested') {
+    return (
+      <div className="card compact-card auth-card">
+        <div className="auth-success">
+          <div className="auth-success-icon">
+            <CheckCircle2 size={36} aria-hidden="true" />
+          </div>
+          <h2>Reset Request Sent</h2>
+          <p>{notice}</p>
+          <p className="auth-muted">
+            Once the administrator approves it, they will give you a one-time reset code.
+            Enter that code below to set a new password.
+          </p>
+          <button type="button" className="btn btn-primary" onClick={() => switchMode('reset')}>
+            I Have a Reset Code
+          </button>
+          <p className="auth-switch">
+            <button type="button" className="link-btn" onClick={() => switchMode('login')}>
+              Back to Sign In
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'forgot') {
+    return (
+      <div key={mode} className="card compact-card auth-card">
+        <div className="card-header">
+          <div className="welcome-icon"><MailQuestion size={26} aria-hidden="true" /></div>
+          <h2>Forgot Password</h2>
+          <p className="greeting">
+            Enter your username or email. Your request goes to the administrator, who will give you a
+            one-time reset code.
+          </p>
+        </div>
+
+        {error && <Notice tone="danger" icon={AlertCircle} title={error} />}
+
+        <form onSubmit={handleForgotPassword}>
+          <InputField
+            icon={AtSign}
+            label="Username or Email"
+            value={forgotIdentifier}
+            onChange={setForgotIdentifier}
+            placeholder="e.g. jdelacruz or you@example.com"
+            autoComplete="username"
+            autoFocus
+          />
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? 'Sending Request...' : 'Request Password Reset'}
+          </button>
+          <p className="auth-switch">
+            Already have a code?{' '}
+            <button type="button" className="link-btn" onClick={() => switchMode('reset')}>
+              Enter reset code
+            </button>
+          </p>
+          <p className="auth-switch">
+            <button type="button" className="link-btn" onClick={() => switchMode('login')}>
+              Back to Sign In
+            </button>
+          </p>
+        </form>
+      </div>
+    );
+  }
+
+  if (mode === 'reset') {
+    return (
+      <div key={mode} className="card compact-card auth-card">
+        <div className="card-header">
+          <div className="welcome-icon"><KeyRound size={26} aria-hidden="true" /></div>
+          <h2>Set a New Password</h2>
+          <p className="greeting">Enter the one-time code the administrator gave you.</p>
+        </div>
+
+        {error && <Notice tone="danger" icon={AlertCircle} title={error} />}
+
+        <form onSubmit={handleResetPassword}>
+          <InputField
+            icon={AtSign}
+            label="Username or Email"
+            value={resetForm.identifier}
+            onChange={updateReset('identifier')}
+            placeholder="e.g. jdelacruz"
+            autoComplete="username"
+            autoFocus={!resetForm.identifier}
+          />
+          <InputField
+            icon={KeyRound}
+            label="Reset Code"
+            value={resetForm.code}
+            onChange={(v) => updateReset('code')(v.toUpperCase())}
+            placeholder="ABCD-2345"
+            autoComplete="one-time-code"
+            autoFocus={Boolean(resetForm.identifier)}
+            hint="The code expires shortly after the administrator issues it."
+          />
+          <PasswordField
+            label="New Password"
+            value={resetForm.password}
+            onChange={updateReset('password')}
+            placeholder="At least 8 characters"
+            autoComplete="new-password"
+          />
+          <PasswordField
+            label="Confirm New Password"
+            value={resetForm.confirmPassword}
+            onChange={updateReset('confirmPassword')}
+            placeholder="Re-enter your new password"
+            autoComplete="new-password"
+          />
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? 'Saving...' : 'Change Password'}
+          </button>
+          <p className="auth-switch">
+            <button type="button" className="link-btn" onClick={() => switchMode('login')}>
+              Back to Sign In
+            </button>
+          </p>
+        </form>
+      </div>
+    );
+  }
 
   if (mode === 'registered') {
     return (
@@ -182,6 +362,9 @@ export default function AuthPage({ onAuthenticated }) {
       {error && (
         <Notice tone="danger" icon={AlertCircle} title={error} />
       )}
+      {notice && !error && (
+        <Notice tone="success" icon={CheckCircle2} title={notice} />
+      )}
 
       {isLogin ? (
         <form onSubmit={handleLogin}>
@@ -200,6 +383,13 @@ export default function AuthPage({ onAuthenticated }) {
             onChange={updateLogin('password')}
             placeholder="Enter your password"
             autoComplete="current-password"
+            footer={
+              <div className="forgot-row">
+                <button type="button" className="link-btn" onClick={() => switchMode('forgot')}>
+                  Forgot password?
+                </button>
+              </div>
+            }
           />
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? 'Signing In...' : 'Sign In'}
