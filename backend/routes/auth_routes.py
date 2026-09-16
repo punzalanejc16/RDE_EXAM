@@ -5,12 +5,16 @@ from services.auth_service import (
     revoke_admin_sessions
 )
 from services.user_service import (
-    create_user, find_by_username, verify_password, public_user, revoke_sessions,
-    STATUS_PENDING, STATUS_REJECTED
+    create_user, find_by_username, find_by_username_or_email, verify_password, public_user,
+    revoke_sessions, set_password, STATUS_PENDING, STATUS_REJECTED
 )
+from services.reset_service import request_reset, redeem_code
 from services.storage_service import attempt_summary
 from services.http_utils import json_body, text_field, client_ip
-from services.rate_limit import login_failures_by_user, login_failures_by_ip, registrations_by_ip
+from services.rate_limit import (
+    login_failures_by_user, login_failures_by_ip, registrations_by_ip,
+    reset_requests_by_ip, reset_failures_by_user
+)
 
 auth_bp = Blueprint('auth_bp', __name__)
 
@@ -132,3 +136,68 @@ def logout():
     else:
         revoke_sessions(g.current_user['id'])
     return jsonify({"success": True}), 200
+
+
+# ── Password reset (administrator hands out a one-time code) ──
+
+GENERIC_RESET_REPLY = {
+    "success": True,
+    "message": ('If that account exists, your password reset request has been sent to the administrator. '
+                'They will give you a one-time reset code.'),
+}
+
+
+@auth_bp.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    ip = client_ip()
+    wait = reset_requests_by_ip.retry_after(ip)
+    if wait:
+        return _too_many(wait)
+
+    data = json_body()
+    identifier = text_field(data, 'identifier').strip()
+    if not identifier or len(identifier) > MAX_EMAIL_LENGTH:
+        return jsonify({"error": 'Please enter your username or email address.'}), 400
+
+    reset_requests_by_ip.hit(ip)
+    user = find_by_username_or_email(identifier)
+    if user:
+        request_reset(user)
+    # Same reply either way, so nobody can use this to discover usernames
+    return jsonify(GENERIC_RESET_REPLY), 200
+
+
+@auth_bp.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    data = json_body()
+    identifier = text_field(data, 'identifier').strip()
+    code = text_field(data, 'code').strip().upper()
+    new_password = text_field(data, 'newPassword')
+
+    if not identifier or not code:
+        return jsonify({"error": 'Please enter your username and the reset code.'}), 400
+    if not MIN_PASSWORD_LENGTH <= len(new_password) <= MAX_PASSWORD_LENGTH:
+        return jsonify({"error": f'Password must be {MIN_PASSWORD_LENGTH}-{MAX_PASSWORD_LENGTH} characters.'}), 400
+
+    user_key = identifier.lower()
+    wait = reset_failures_by_user.retry_after(user_key)
+    if wait:
+        return _too_many(wait)
+
+    user = find_by_username_or_email(identifier)
+    if not user:
+        reset_failures_by_user.hit(user_key)
+        return jsonify({"error": 'That reset code is not correct.'}), 400
+
+    ok, error = redeem_code(user, code)
+    if not ok:
+        reset_failures_by_user.hit(user_key)
+        return jsonify({"error": error}), 400
+
+    set_password(user['id'], new_password)
+    reset_failures_by_user.reset(user_key)
+    login_failures_by_user.reset(user['username'].lower())
+    return jsonify({
+        "success": True,
+        "message": 'Your password has been changed. You can now sign in with your new password.',
+    }), 200

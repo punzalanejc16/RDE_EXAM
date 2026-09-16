@@ -7,3 +7,4 @@ admin_state.json
 *.bak
 __pycache__/
 *.py[cod]
+password_resets.json

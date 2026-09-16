@@ -1248,6 +1248,47 @@ body.dark-mode .option-cell.wrong-answer .badge {
   color: var(--color-warning);
 }
 
+.auth-notice.success {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.forgot-row .link-btn {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.admin-muted {
+  color: var(--color-text-faint);
+}
+
+.confirm-icon.code {
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+}
+
+.reset-code {
+  margin: 18px 0 4px;
+  padding: 16px 12px;
+  border: 1px dashed var(--color-accent-border);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-light);
+  color: var(--color-heading);
+  font-family: 'Courier New', ui-monospace, monospace;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-align: center;
+  user-select: all;
+}
+
 .auth-notice.danger {
   background: var(--color-danger-light);
   border-color: var(--color-danger);

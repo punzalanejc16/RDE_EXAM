@@ -53,7 +53,31 @@ In production, the backend serves both the API and the built frontend from one a
 
 ---
 
-## 3. Candidate Dashboard
+## 3. Forgot Password
+
+There is no email server, so a reset is handed out by the administrator instead of emailed.
+
+**User action:** On the sign-in screen the candidate clicks **"Forgot password?"** (under the password field), enters their username or email, and submits.
+
+**System process:**
+
+1. `POST /api/auth/forgot-password` records the request. The reply is the same whether or not the account exists, so nobody can use this page to discover usernames.
+2. The request appears in the admin dashboard under **Password Resets**, with a badge showing how many are waiting.
+3. The administrator clicks **Approve**, and a **one-time code** (for example `ZKJD-2X5B`) is shown **once**. They pass it to the candidate in person, by phone or by email. **Deny** refuses the request instead.
+4. The candidate clicks **"I Have a Reset Code"**, enters the code and a new password, and submits to `POST /api/auth/reset-password`.
+5. The password changes, every existing session for that account ends, and the code cannot be used again.
+
+**Limits:**
+
+- A code expires after 60 minutes (`RESET_CODE_MAX_MINUTES`).
+- Only the hash of the code is stored, never the code itself.
+- 5 wrong codes lock that account's reset for 15 minutes; 10 reset requests per network per hour.
+- Asking again replaces any code already issued.
+- Deleting an account also removes its reset requests.
+
+---
+
+## 4. Candidate Dashboard
 
 After signing in, the candidate sees:
 
@@ -65,7 +89,7 @@ After signing in, the candidate sees:
 
 ---
 
-## 4. Sequential Assessment Workflow
+## 5. Sequential Assessment Workflow
 
 **User action:** The candidate clicks **"Start Examination"**, views one question at a time with its component image, selects an option, and clicks **"Next Question"**.
 
@@ -80,7 +104,7 @@ After signing in, the candidate sees:
 
 ---
 
-## 5. Automated Evaluation & Submission
+## 6. Automated Evaluation & Submission
 
 **User action:** On the last item, the button changes to **"Submit Examination"**.
 
@@ -105,11 +129,11 @@ After signing in, the candidate sees:
 
 ---
 
-## 6. Administrator Dashboard
+## 7. Administrator Dashboard
 
 **Sign in:** The administrator uses the normal sign-in page with the admin username and password configured in `backend/.env` (see Configuration). There is no hidden URL.
 
-The dashboard has two tabs.
+The dashboard has three tabs.
 
 ### Account Approvals
 - Pending / Approved / Rejected counters and filter chips
@@ -121,6 +145,12 @@ The dashboard has two tabs.
   - **Delete** an account (a confirmation dialog appears; past submissions are kept)
 - Changing an account's status immediately ends that user's active sessions.
 
+### Password Resets
+- Every reset request with its status: Awaiting Approval, Code Issued, Password Changed, or Denied
+- **Approve** shows the one-time code once, with a **Copy Code** button
+- **Deny** refuses the request
+- Approving again on the same request issues a fresh code and invalidates the old one
+
 ### Exam Results
 - A table of every submission: name, attempt, score, percentage, status, start time, and completion time
 - **Review Exam:** loads that attempt's full breakdown, with each image, the candidate's answer, and the correct answer
@@ -128,14 +158,14 @@ The dashboard has two tabs.
 
 ---
 
-## 7. Sign Out & Sessions
+## 8. Sign Out & Sessions
 
 - **Sign Out** ends the session **on the server**, on every device for that account, and clears saved exam progress on that device.
 - Changing the admin password in `.env` (and restarting the server) signs the administrator out everywhere.
 
 ---
 
-## 8. Data & Security
+## 9. Data & Security
 
 | File | Contents |
 |---|---|
@@ -144,6 +174,7 @@ The dashboard has two tabs.
 | `backend/users.json` | Accounts (password hashes only) |
 | `backend/results.json` | Exam submissions |
 | `backend/admin_state.json` | Admin session version |
+| `backend/password_resets.json` | Password reset requests (code hashes only) |
 | `*.bak` | Previous version of each data file, kept automatically |
 
 **Data safety:**
@@ -159,11 +190,11 @@ The dashboard has two tabs.
 - Security headers are sent: Content Security Policy, no framing, no content sniffing.
 - CORS is limited to the configured development origins.
 
-> `users.json`, `results.json`, `.env`, and `.secret_key` are in `.gitignore` and must never be committed.
+> `users.json`, `results.json`, `password_resets.json`, `.env`, and `.secret_key` are in `.gitignore` and must never be committed.
 
 ---
 
-## 9. Running the Portal
+## 10. Running the Portal
 
 ### First-time setup
 ```bash
@@ -196,13 +227,17 @@ cd frontend
 npm run dev            # site on http://localhost:5173 (API calls are proxied to port 5000)
 ```
 
+> **The dev server's port can change.** If another app already uses 5173, Vite picks the next free port (5174, and so on). Check the address it prints in the terminal.
+
 > **After editing `backend/.env`, always restart the backend.** Settings are read only when the server starts.
+
+> **After changing frontend code, run `npm run build`** if you are serving the site from the backend (port 5000). The dev server on 5173 updates by itself.
 
 > **Before exposing the portal to the internet,** put it behind HTTPS (for example Caddy or nginx) and set `TRUST_PROXY=1`.
 
 ---
 
-## 10. Configuration (`backend/.env`)
+## 11. Configuration (`backend/.env`)
 
 | Setting | Default | Purpose |
 |---|---|---|
@@ -217,12 +252,32 @@ npm run dev            # site on http://localhost:5173 (API calls are proxied to
 | `LOGIN_FAILURES_PER_IP` | `30` | Failed sign-ins before a 15-minute network lock |
 | `REGISTRATIONS_PER_IP_PER_HOUR` | `20` | Raise this if a whole exam room registers from one network |
 | `EXAM_ATTEMPT_MAX_HOURS` | `4` | How long a started exam stays valid |
+| `RESET_CODE_MAX_MINUTES` | `60` | How long a password reset code stays valid |
+| `RESET_REQUESTS_PER_IP_PER_HOUR` | `10` | Password reset requests allowed per network |
+| `RESET_FAILURES_PER_ACCOUNT` | `5` | Wrong reset codes before a 15-minute lock |
 
 Frontend (optional): `VITE_API_BASE_URL`. Set it only if the API is hosted on a different address than the website.
 
 ---
 
-## 11. API Reference
+## 12. Troubleshooting
+
+| Problem | Cause and fix |
+|---|---|
+| Admin password from `.env` is rejected | The backend reads `.env` only at startup. Stop it (Ctrl + C) and run it again. |
+| "Too many attempts. Please try again in about 15 minutes." | The account or network hit a rate limit. Wait it out, or restart the backend to clear the counters. |
+| The site opens on a different port than 5173 | Another app holds 5173. Use the address Vite prints, or close the other app. |
+| Editor underlines `from flask import ...` in red | VS Code is using a Python version that does not have the packages. Press Ctrl + Shift + P, choose **Python: Select Interpreter**, and pick the one where you ran `pip install -r requirements.txt`. |
+| The page says "Frontend is not built" | Run `npm run build` in `frontend/`. |
+| Site loads, but every action fails | The backend is not running, or it is on another address. Start `python serve.py` and check the port. |
+| Candidate is stuck on "Account pending approval" | Approve the account in **Account Approvals**. |
+| A candidate lost their password | Have them use **Forgot password?**, then approve it in **Password Resets** and give them the code. |
+| Everyone is signed out after an update | Expected. Sessions end when the server's secret or the admin password changes. |
+| `Data storage is temporarily unavailable` | A data file could not be read. The backend refuses to overwrite it. Restore from the matching `.bak` file in `backend/`. |
+
+---
+
+## 13. API Reference
 
 | Method | Endpoint | Access | Purpose |
 |---|---|---|---|
@@ -230,6 +285,8 @@ Frontend (optional): `VITE_API_BASE_URL`. Set it only if the API is hosted on a 
 | POST | `/api/auth/login` | Public | Sign in (candidate or admin) |
 | GET | `/api/auth/me` | Signed in | Current user and attempt summary |
 | POST | `/api/auth/logout` | Signed in | End all sessions for this account |
+| POST | `/api/auth/forgot-password` | Public | Ask the administrator for a password reset |
+| POST | `/api/auth/reset-password` | Public | Set a new password using a one-time code |
 | GET | `/api/questions` | Candidate | Question list (no answers) |
 | POST | `/api/exam/start` | Candidate | Start an attempt (returns ticket + questions) |
 | POST | `/api/submit` | Candidate | Submit an attempt |
@@ -238,6 +295,9 @@ Frontend (optional): `VITE_API_BASE_URL`. Set it only if the API is hosted on a 
 | POST | `/api/admin/users/<id>/approve` | Admin | Approve an account |
 | POST | `/api/admin/users/<id>/reject` | Admin | Reject or revoke an account |
 | DELETE | `/api/admin/users/<id>` | Admin | Delete an account |
+| GET | `/api/admin/password-resets` | Admin | List password reset requests |
+| POST | `/api/admin/password-resets/<id>/approve` | Admin | Approve and get the one-time code |
+| POST | `/api/admin/password-resets/<id>/deny` | Admin | Deny a reset request |
 | GET | `/api/admin/results` | Admin | List submissions (summary) |
 | GET | `/api/admin/results/<id>` | Admin | One submission with full breakdown |
 | DELETE | `/api/admin/results/<id>` | Admin | Delete a submission |
