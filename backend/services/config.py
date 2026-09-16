@@ -10,7 +10,7 @@ _secret = None
 
 
 def get_secret_key():
-    # SECRET_KEY sa .env kung may; kung wala, gumawa ng isa at i-save para hindi mag-logout sa restart
+    # Use SECRET_KEY from .env if set; otherwise generate one and save it so sessions survive a restart
     global _secret
     env_key = os.getenv('SECRET_KEY')
     if env_key:

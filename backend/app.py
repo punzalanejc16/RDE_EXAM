@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# Explicit path papunta sa .env file sa root ng backend
+# Explicit path to the .env file in the backend root
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
